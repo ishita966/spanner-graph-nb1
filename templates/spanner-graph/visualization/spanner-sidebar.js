@@ -38,12 +38,6 @@ class Sidebar {
      */
     edges = [];
 
-    /**
-     * @type {Map<HTMLElement, Edge>}
-     */
-    edgesAssignedToHtmlELement = {}
-
-
     neighbors = [];
 
 
@@ -57,7 +51,7 @@ class Sidebar {
      * @property {HTMLElement|null} nodeType - The element displaying the node type
      * @property {HTMLElement|null} nodePropertyList - The list container for node properties
      * @property {HTMLElement|null} edgeGroups - The container for edge group information
-     * @property {HTMLElement|null} edgeGroupHeader - The header for edge group information
+     * @property {HTMLElement|null} edgeGroupsHeader - The header for edge group information
      */
 
     /** @type {SidebarElements} */
@@ -73,103 +67,12 @@ class Sidebar {
         edgeGroupsHeader: null
     };
 
-    createdEdgeGroups = {};
-
     constructor(inStore, inMount) {
         this.store = inStore;
         this.mount = inMount;
         this.constructSidebar();
 
         this.initializeEvents(this.store);
-    }
-
-    /**
-     *
-     * @param {Edge} edge
-     */
-    constructSelectedEdge(edge) {
-        /**
-         * @param {Node} node
-         */
-        const html = `
-            <div class="node-neighbors">
-                <div class="node-neighbor">
-                    <div class="section-header">
-                        <div class="node-neighbor-label">${edge.label}</div>
-                        <div class="node-neighbor-destination>source</div>
-                    </div>
-                    <div class="property-list">
-                        ${Object.keys(edge.properties).forEach(key => (
-                            this.createPropertyItem(key, edge.properties[key])
-                        ))}
-                    </div>
-                </div>
-                <div class="node-neighbor">
-                    <div class="node-neighbor-label">{label}</div>
-                    <div class="property-list">
-                        <div class="node-neighbor-value">{value}</div>
-                            <div class="property-item"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            `
-    }
-
-    /**
-     *
-     * @param {Node} node
-     * @returns
-     */
-    createNeighborNode(node) {
-        const edgeGroup = document.createElement('div');
-        edgeGroup.className = 'edge-group';
-        edgeGroup.innerHTML = `
-            <div class="edge-group-header">
-                <span class="edge-type">${node.label || 'Unlabeled Node'}</span>
-            </div>
-            <div class="edge-group-content"></div>`;
-
-        if (!node.propertes) {
-            return;
-        }
-
-        const header = edgeGroup.querySelector('.edge-group-header');
-        header.addEventListener('click', () => this.toggleEdgeGroup(header));
-
-        const content = edgeGroup.querySelector('.edge-group-content');
-        const edgeItem = document.createElement('div');
-        edgeItem.className = 'edge-item';
-        edgeItem.innerHTML = `
-            <div class="property-list edge-properties"></div>`;
-
-        const edgeProperties = edgeItem.querySelector('.edge-properties');
-        for (const [property, value] of Object.entries(node.properties)) {
-            const edgeProperty = this.createPropertyItem(property, value);
-            edgeProperties.appendChild(edgeProperty);
-        }
-        `
-`
-        content.appendChild(edgeItem);
-        edgeGroup.appendChild(content);
-
-        this.elements.edgeGroups.appendChild(edgeGroup);
-    }
-
-    toCamelCase(str) {
-        return str
-            // Split the string into words using a regex that matches spaces, underscores, and hyphens
-            .split(/[\s_\-]+/)
-            // Map through the words, converting the first letter of each word to uppercase,
-            // except for the first word, which is converted to lowercase.
-            .map((word, index) => {
-                if (index === 0) {
-                    return word.toLowerCase();
-                }
-                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-            })
-            // Join the words back together
-            .join('');
     }
 
     constructSidebar() {
@@ -218,7 +121,7 @@ class Sidebar {
         function showNodeKeyProperty(node) {
             let prop = '';
             if (node.properties && node.key_property_names) {
-                if (node.key_property_names.length == 1) {
+                if (node.key_property_names.length === 1) {
                     const propName = node.key_property_names[0];
                     if (node.properties.hasOwnProperty(propName)) {
                         prop = node.properties[propName];
@@ -303,7 +206,7 @@ class Sidebar {
                     });
 
                     neighborDiv.addEventListener('mouseout', () => {
-                        this.store.setFocusedObject();
+                        this.store.setFocusedObject(null);
                     });
 
                     neighborDiv.addEventListener('click', () => {
@@ -336,7 +239,7 @@ class Sidebar {
                     });
 
                     neighborDiv.addEventListener('mouseout', () => {
-                        this.store.setFocusedObject();
+                        this.store.setFocusedObject(null);
                     });
 
                     neighborDiv.addEventListener('click', () => {
@@ -596,7 +499,7 @@ class Sidebar {
      */
     initializeEvents(store) {
         if (!(store instanceof GraphStore)) {
-            throw Error('Store must be an instance of GraphStore', store);
+            throw Error('Store must be an instance of GraphStore');
         }
 
         store.addEventListener(GraphStore.EventTypes.SELECT_OBJECT,
@@ -621,66 +524,6 @@ class Sidebar {
                 this.mount.textContent = '';
                 this.constructSidebar();
             });
-    }
-
-    onSelectedObjectChanged(object) {
-        if (!object) {
-            return;
-        }
-
-        this.elements.sidebarHeader.textContent = object.label ? object.label : 'Unlabeled';
-
-        if (!object.properties) {
-            return;
-        }
-
-        this.elements.nodeProperties.style.display = 'block';
-
-        for (const [label, value] of Object.entries(object.properties)) {
-            this.elements.nodePropertyList.appendChild(this.createPropertyItem(label, value));
-        }
-    }
-
-    createPropertyItem(label, value) {
-        const item = document.createElement('li');
-        item.className = 'property-item';
-        item.innerHTML = `
-            <div class="property-label">${label}</div>
-            <div class="property-value-container">
-                <div class="property-value">${value}</div>
-                <button class="copy-button" onclick="copyToClipboard('${value}')" title="Copy to clipboard">
-                    <svg class="copy-icon" viewBox="0 0 24 24">
-                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                    </svg>
-                </button>
-            </div>
-        `;
-        return item;
-    }
-
-    populateNodeProperties() {
-        if (!this.selectedObject) {
-            return;
-        }
-
-        this.elements.nodeType.textContent =
-            this.selectedObject.label ? this.selectedObject.label : 'Unlabeled Node';
-
-        if (!this.selectedObject.properties) {
-            return;
-        }
-
-        for (const [label, value] of Object.entries(this.selectedObject.properties)) {
-            this.elements.nodePropertyList.appendChild(this.createPropertyItem(label, value));
-        }
-    }
-
-    copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            console.log('Copied to clipboard');
-        }, (err) => {
-            console.error('Could not copy text: ', err);
-        });
     }
 }
 

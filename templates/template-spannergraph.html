@@ -165,9 +165,6 @@ limitations under the License.
             const edges = {{ edges| tojson }};
             const rows = {{ rows| tojson }} || [];
             renderGraph({ nodes, edges, rows });
-
-            // const { nodes, links } = window[namespace].mockData;
-            // renderGraph({ nodes, edges: links });
         });
 
         const renderGraph = ({ nodes, edges, rows }) => {

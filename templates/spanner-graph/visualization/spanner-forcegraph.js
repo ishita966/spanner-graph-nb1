@@ -1,16 +1,16 @@
-/* # Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+/**
+ * Copyright 2024 Google LLC
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 class GraphVisualization {
@@ -64,7 +64,7 @@ class GraphVisualization {
     focusedEdgeNeighbors = [];
 
     /**
-     * All of the edges connected to the selected node. They will be visually highlighted.
+     * All the edges connected to the selected node. They will be visually highlighted.
      * @type {Array<Edge>}
      */
     selectedNodeEdges = [];
@@ -82,7 +82,7 @@ class GraphVisualization {
     focusedNode = null;
 
     /**
-     * All of the edges connected to the focused node. They will be visually highlighted.
+     * All the edges connected to the focused node. They will be visually highlighted.
      * @type {Array<Edge>}
      */
     focusedNodeEdges = [];
@@ -101,7 +101,7 @@ class GraphVisualization {
 
     // The graph will only automatically center upon
     // the initial layout has finished.
-    initialCenteringHasHappenned = false;
+    requestedRecenter = false;
 
 
     /**
@@ -110,7 +110,7 @@ class GraphVisualization {
      * @property {number} zoomInIncrement - Increment value for zooming in.
      * @property {number} zoomOutIncrement - Increment value for zooming out.
      * @property {number} zoomOutSpeed - Speed of zooming out.
-     * @property {number} recenterSpeed - Speed of recentering.
+     * @property {number} recenterSpeed - Speed of recenter.
      */
     /**
      * @typedef {Object} ToolsElements
@@ -130,7 +130,8 @@ class GraphVisualization {
             container: null,
             recenter: null,
             zoomIn: null,
-            zoomOut: null
+            zoomOut: null,
+            toggleFullscreen: null
         },
         config: {
             zoomInSpeed: 100,
@@ -154,12 +155,17 @@ class GraphVisualization {
      * @typedef {Object} MenuElements
      * @property {HTMLElement|null} cluster - The element that toggles cluster method
      */
+
     /**
-     * @typedef {Object} Menu
-     * @property {ToolsElements} elements - The HTML elements used by the tools.
-     * @property {ToolsConfig} config - Configuration for the tools.
+     *
+     * @type {
+     *  {
+     *  layout: {lastLayout: null,
+     *  currentLayout: null},
+     *  elements: {cluster: null},
+     *  config: {clusterBy: symbol}
+     *  }}
      */
-    /** @type {Menu} */
     menu = {
         elements: {
             cluster: null
@@ -181,55 +187,32 @@ class GraphVisualization {
         UNDEFINED: Symbol('Large'),
     });
 
-    getGraphSize() {
-        if (!this.store) {
-            console.error('getGraphSize: Store is not defined');
-            return GraphVisualization.GraphSizes.UNDEFINED;
-        }
-
-        const { nodes } = this.store.config;
-
-        if (nodes.length < 100) {
-            return GraphVisualization.GraphSizes.SMALL;
-        }
-
-        if (nodes.length < 500) {
-            return GraphVisualization.GraphSizes.MEDIUM;
-        }
-
-        return GraphVisualization.GraphSizes.LARGE;
-    }
-
     getNodeRelativeSize() {
         return this.NODE_REL_SIZE;
     }
 
-    nodeCanvasObjectFunctions = []
-
     NODE_REL_SIZE = 4;
 
-    EDGE_DEFAULT_WIDTH = 2;
-    EDGE_MAX_COUNT_SHOW_LABEL = 100;
-    EDGE_PARTICLE_DEFAULT_COUNT = 0;
-    EDGE_PARTICLE_DEFAULT_WIDTH = 0;
+    enterFullscreenSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#3C4043"><path d="M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z"/></svg>`;
+    exitFullscreenSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#3C4043"><path d="M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z"/></svg>`;
 
     /**
      * Renders a graph visualization.
-     * @param {GraphStore} - The store to derive configuration from.
-     * @param HTMLElement - The DOM element that the graph will be rendered in.
-     * @param HTMLElement - The DOM element that the top menu will be rendered in.
+     * @param {GraphStore} inStore - The store to derive configuration from.
+     * @param {HTMLElement} inMount - The DOM element that the graph will be rendered in.
+     * @param {HTMLElement} inMenuMount - The DOM element that the top menu will be rendered in.
      */
     constructor(inStore, inMount, inMenuMount) {
         if (!(inStore instanceof GraphStore)) {
-            throw Error('Store must be an instance of GraphStore', inStore);
+            throw Error('Store must be an instance of GraphStore');
         }
 
         if (!(inMount instanceof HTMLElement)) {
-            throw Error('Mount must be an instance of HTMLElement', inMount);
+            throw Error('Mount must be an instance of HTMLElement');
         }
 
         if (!(inMenuMount instanceof HTMLElement)) {
-            throw Error('Menu Mount must be an instance of HTMLElement', inMenuMount);
+            throw Error('Menu Mount must be an instance of HTMLElement');
         }
 
         this.store = inStore;
@@ -277,7 +260,7 @@ class GraphVisualization {
      */
     initializeEvents(store) {
         if (!(store instanceof GraphStore)) {
-            throw Error('Store must be an instance of GraphStore', store);
+            throw Error('Store must be an instance of GraphStore');
         }
 
         store.addEventListener(GraphStore.EventTypes.CONFIG_CHANGE,
@@ -289,7 +272,6 @@ class GraphVisualization {
                 this.focusedNodeEdges = [];
                 this.focusedNodeNeighbors = []
                 this.focusedEdge = null;
-                this.focusedEdgeNodes = [];
 
                 if (graphObject instanceof Node) {
                     this.onFocusedNodeChanged(graphObject)
@@ -334,7 +316,7 @@ class GraphVisualization {
             delete this.tooltips[key];
         });
 
-        if (graphObjects.length == 0) {
+        if (graphObjects.length === 0) {
             return;
         }
 
@@ -385,6 +367,9 @@ class GraphVisualization {
                 <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#3C4043">
                     <path d="M480-320q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-480q0-33-23.5-56.5T480-560q-33 0-56.5 23.5T400-480q0 33 23.5 56.5T480-400Zm0-80ZM200-120q-33 0-56.5-23.5T120-200v-160h80v160h160v80H200Zm400 0v-80h160v-160h80v160q0 33-23.5 56.5T760-120H600ZM120-600v-160q0-33 23.5-56.5T200-840h160v80H200v160h-80Zm640 0v-160H600v-80h160q33 0 56.5 23.5T840-760v160h-80Z"/>
                 </svg>
+            </button>
+            <button id="graph-fullscreen" title="Toggle Fullscreen">
+                ${this.enterFullscreenSvg}
             </button>`;
 
         this.tools.elements.container = document.createElement('div');
@@ -406,10 +391,51 @@ class GraphVisualization {
         this.tools.elements.zoomOut.addEventListener('click', () => {
             graphObject.zoom(graphObject.zoom() * this.tools.config.zoomOutIncrement, this.tools.config.zoomOutSpeed);
         });
+
+        this.tools.elements.toggleFullscreen = this.tools.elements.container.querySelector('#graph-fullscreen');
+        window.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    this.mount.style.width = window.innerWidth + 'px';
+                    this.mount.style.height = document.querySelector('body').innerHeight + 'px';
+                    this.graph.width(this.mount.offsetWidth);
+                    this.graph.height(this.mount.offsetHeight);
+                } else {
+                    this.mount.style.width = window.innerWidth + 'px';
+                    this.mount.style.height = document.querySelector('body').innerHeight + 'px';
+                    this.graph.width(this.mount.offsetWidth);
+                    this.graph.height(this.mount.offsetHeight);
+                }
+        });
+
+        this.tools.elements.toggleFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                this.tools.elements.toggleFullscreen.innerHTML = this.exitFullscreenSvg;
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) { // Firefox
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
+                    document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                this.tools.elements.toggleFullscreen.innerHTML = this.enterFullscreenSvg;
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        });
     }
 
-    _setupMenu(graphObject) {
-        const html = `
+    _setupMenu() {
+        this.menuMount.innerHTML = `
             <style>
                 .menu-bar {
                     align-items: center;
@@ -419,6 +445,7 @@ class GraphVisualization {
                     display: flex;
                     padding: 16px 24px 16px 16px;
                     width: 100%;
+                    background: #fff;
                 }
                 .menu-item {
                     display: flex;
@@ -608,8 +635,6 @@ class GraphVisualization {
                 </div>
             </div>`
 
-        this.menuMount.innerHTML = html;
-
         this.menu.elements.layoutButtons = this.menuMount.querySelectorAll('.dropdown-item');
         
         this.menuMount.querySelector('.dropdown-content').addEventListener('click', e => {
@@ -639,14 +664,14 @@ class GraphVisualization {
         this.menu.elements.showLabels = this.menuMount.querySelector('#show-labels');
         this.menu.elements.showLabels.addEventListener('change', () => {
             this.menu.config.showLabels = this.menu.elements.showLabels.checked;
-        
+
             if (this.menu.config.showLabels) {
                 // Pass an array of all nodes and edges to refreshTooltips
-                this.refreshTooltips(this.graph.graphData().nodes); 
+                this.refreshTooltips(this.graph.graphData().nodes);
             } else {
                 this.refreshTooltips([this.store.config.selectedGraphObject]);
             }
-        });        
+        });
     }
 
     createTooltip(node) {
@@ -665,7 +690,7 @@ class GraphVisualization {
         let tipContent = ``;
 
         if (node.properties && node.key_property_names) {
-            if (node.key_property_names.length == 1) {
+            if (node.key_property_names.length === 1) {
                 const propName = node.key_property_names[0];
                 if (node.properties.hasOwnProperty(propName)) {
                     tipContent = `<div>${this.sanitize(node.properties[propName])}</div>`;
@@ -715,7 +740,7 @@ class GraphVisualization {
         const { nodes, links } = this.graph.graphData();
 
         this.selectedNodeEdges = links.filter(
-            link => link.source.id === node.id || link.target.id === node.id);;
+            link => link.source.id === node.id || link.target.id === node.id);
 
         this.selectedNodeNeighbors = nodes.filter(n => {
             const selectedEdges = this.selectedNodeEdges.filter(link => link.source.id === n.id || link.target.id === n.id);
@@ -734,7 +759,6 @@ class GraphVisualization {
 
     onFocusedEdgeChanged(edge) {
         this.focusedEdge = edge;
-        this.focusedEdgeNodes = [];
         this.focusedNodeNeighbors = [];
 
         if (!this.focusedEdge) {
@@ -777,7 +801,6 @@ class GraphVisualization {
     }
 
     _setupLineLength(graph) {
-                
         this.graph.calculateLineLengthByCluster = () => {
             this.graph
                 .d3Force('link').distance(link => {
@@ -785,7 +808,7 @@ class GraphVisualization {
 
                     // Only apply neighborhood clustering logic if using force layout
                     if (this.graph.dagMode() === '') {
-                        distance = link.source.neighborhood == link.target.neighborhood ? distance * 0.5 : distance * 0.8;
+                        distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.5 : distance * 0.8;
                     } else {
                         // For other layouts, you might want a different distance calculation
                         distance = null; // Example: Fixed distance for non-force layouts
@@ -877,8 +900,7 @@ class GraphVisualization {
                 
                         const lightenAmount = 0.48;
                         const originalColor = edgeDesign.color;
-                        const lightenedColor = this.lightenColor(originalColor, lightenAmount);
-                        return lightenedColor;
+                        return this.lightenColor(originalColor, lightenAmount);
                     } else {
                         return edgeDesign.color; // Return original color
                     }
@@ -900,9 +922,9 @@ class GraphVisualization {
         G = Math.floor((G * (1 - amount)) + (255 * amount));
         B = Math.floor((B * (1 - amount)) + (255 * amount));
 
-        const RR = ((R.toString(16).length == 1) ? "0" + R.toString(16) : R.toString(16));
-        const GG = ((G.toString(16).length == 1) ? "0" + G.toString(16) : G.toString(16));
-        const BB = ((B.toString(16).length == 1) ? "0" + B.toString(16) : B.toString(16));
+        const RR = ((R.toString(16).length === 1) ? "0" + R.toString(16) : R.toString(16));
+        const GG = ((G.toString(16).length === 1) ? "0" + G.toString(16) : G.toString(16));
+        const BB = ((B.toString(16).length === 1) ? "0" + B.toString(16) : B.toString(16));
 
         return "#" + RR + GG + BB;
     }
@@ -1015,7 +1037,7 @@ class GraphVisualization {
                 <div><strong>${this.sanitize(element.label)}</strong></div>`;
 
         if (element.properties) {
-            if (element.key_property_names.length == 1) {
+            if (element.key_property_names.length === 1) {
                 for (const key of element.key_property_names) {
                     if (element.properties.hasOwnProperty(key)) {
                         content += `<div>${this.sanitize(element.properties[key])}</div>`
@@ -1037,13 +1059,13 @@ class GraphVisualization {
     _setupDrawLabelsOnEdges(graph) {
         /**
          * Draw labels on edges
-         * @param {number} Labels will disappear after the global scale
+         * @param {number} maxGlobalScale - Labels will disappear after the global scale
          * has exceeded this number (aka the user has zoomed out past a threshold)
          */
         graph.labelsOnEdges = (maxGlobalScale) => {
             graph
                 .linkCanvasObjectMode(() => 'after')
-                .linkLabel(link => {
+                .linkLabel(() => {
                     if (this.store.config.selectedGraphObject) {
                         return '';
                     }
@@ -1091,23 +1113,6 @@ class GraphVisualization {
                         if (!showLabel()) {
                             return;
                         }
-
-                        const boldFont = () => {
-                            if (this.selectedEdge) {
-                                return link == this.selectedEdge;
-                            }
-
-                            if (this.selectedNode && this.focusedNode && this.selectedNode != this.focusedNode) {
-                                return (link.source == this.selectedNode || link.target == this.selectedNode) &&
-                                    (link.source == this.focusedNode || link.target == this.focusedNode);
-                            }
-
-                            return false;
-                        };
-
-                        // const MAX_FONT_SIZE = 3;
-                        // const MIN_FONT_SIZE = 1;
-                        // const LABEL_NODE_MARGIN = 2;
 
                         const start = link.source;
                         const end = link.target;
@@ -1175,7 +1180,11 @@ class GraphVisualization {
                         ctx.rotate(textAngle);
 
                         ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-                        ctx.fillRect((-textRect.width / 2)-1, (-fontSize / 2)-1, textRect.width + 2, fontSize + 2, 1);
+                        ctx.fillRect(
+                            (-textRect.width / 2) - 1,
+                            (-fontSize / 2) - 1,
+                            textRect.width + 2,
+                            fontSize + 2, 1);
 
                         // Set text color based on focus OR selection
                         const defaultTextColor = '#9AA0A6'; // Default color
@@ -1209,6 +1218,8 @@ class GraphVisualization {
      * @param {GraphConfig} config - The configuration to render.
      */
     render(config) {
+        this.requestedRecenter = true;
+
         const graphData = {
             nodes: config.nodes,
             links: config.edges
@@ -1217,7 +1228,6 @@ class GraphVisualization {
         const offscreenCanvas = document.createElement('canvas');
         offscreenCanvas.width = this.mount.offsetWidth;
         offscreenCanvas.height = this.mount.offsetHeight;
-        const offscreenCtx = offscreenCanvas.getContext('2d');
 
         this.graph
             // The canvas can sometimes exceed
@@ -1280,194 +1290,4 @@ class GraphVisualization {
     }
 }
 
-const clamp = (input, min, max) => {
-    return input < min ? min : input > max ? max : input;
-}
-
-const map = (current, in_min, in_max, out_min, out_max) => {
-    const mapped = ((current - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-    return clamp(mapped, out_min, out_max);
-}
-
-const getPositionAroundPoint = (link, source, target) => {
-    if (!target) {
-        return null;
-    }
-
-    // Filter the links array to find all links with the same source and target
-    const relatedLinks = json.links.filter(l =>
-        (l.source === source && l.target === target) ||
-        (l.source === target && l.target === source)
-    );
-
-    // Loop over relatedLinks to find the matching link
-    let linkIndex = -1;
-    for (let i = 0; i < relatedLinks.length; i++) {
-        const sourceNode = relatedLinks[i].source;
-        if (relatedLinks[i].source.id == source.id &&
-            relatedLinks[i].target.id == target.id
-        ) {
-            linkIndex = i;
-            break;
-        }
-    }
-
-    // If the link wasn't found, return null or handle the error as appropriate
-    if (linkIndex === -1) {
-        console.error('Link not found in related links');
-        return null;
-    }
-
-    const angle = (linkIndex / 50) * Math.PI * 2;
-    // Calculate the normalized direction vector
-    const directionX = Math.cos(angle);
-    const directionY = Math.sin(angle);
-
-    // Define a scalar for the distance from the source
-    const scalar = 16; // Adjust this value to change the circle radius
-
-    // Calculate the new position
-    const newX = source.x + directionX * scalar;
-    const newY = source.y + directionY * scalar;
-
-    return { x: newX, y: newY };
-}
-
 window[namespace].GraphVisualization = GraphVisualization;
-
-let idCounter = 200;
-
-const mockData =
-{
-    "directed": false,
-    "multigraph": false,
-    "graph": {},
-    "nodes": [
-        {
-            "id": 0
-        },
-        {
-            "id": 1
-        },
-        {
-            "id": 2
-        },
-        {
-            "id": 3
-        },
-        {
-            "id": 4
-        },
-        {
-            "id": 5
-        },
-        {
-            "id": 6
-        },
-        {
-            "id": 7
-        },
-        {
-            "id": 8
-        },
-        {
-            "id": 9
-        }
-    ].map(node => {
-        const labels = ['person', 'account', 'camelcase test'];
-        const colors = ['#ec0001', '#00a2ff', '#00ff00'];
-        const rand = Math.random();
-        const properties = {};
-        for (let i = 0; i < 5; i++) {
-            properties[`key ${i}`] = `value ${i}`;
-        }
-        return {
-            ...node,
-            label: rand > 0.66 ? labels[0] :
-                rand > 0.33 ? labels[1] :
-                    labels[2],
-            color: rand > 0.66 ? colors[0] :
-                rand > 0.33 ? colors[1] :
-                    colors[2],
-            properties
-        };
-    }),
-    "links": [
-        {
-            "source": 0,
-            "target": 1
-        },
-        {
-            "source": 0,
-            "target": 2
-        },
-        {
-            "source": 0,
-            "target": 3
-        },
-        {
-            "source": 0,
-            "target": 4
-        },
-        {
-            "source": 0,
-            "target": 5
-        },
-        {
-            "source": 0,
-            "target": 8
-        },
-        {
-            "source": 2,
-            "target": 6
-        },
-        {
-            "source": 0,
-            "target": 7
-        },
-        {
-            "source": 2,
-            "target": 9
-        },
-        {
-            "source": 3,
-            "target": 4
-        },
-        {
-            "source": 2,
-            "target": 6
-        },
-        {
-            "source": 0,
-            "target": 7
-        },
-        {
-            "source": 2,
-            "target": 9
-        },
-        {
-            "source": 3,
-            "target": 4
-        }
-    ].map(edge => {
-        const labels = ['transaction', 'closure', 'creation'];
-        const rand = Math.random();
-        const properties = {};
-        for (let i = 0; i < 5; i++) {
-            properties[`key ${i}`] = `value ${i}`;
-        }
-        idCounter++;
-        return {
-            ...edge,
-            id: idCounter,
-            to: edge.target,
-            from: edge.source,
-            label: rand > 0.66 ? labels[0] :
-                rand > 0.33 ? labels[1] :
-                    labels[2],
-            properties
-        };
-    })
-}
-
-window[namespace].mockData = mockData;
