@@ -655,6 +655,7 @@ class GraphVisualization {
                 this.menu.config.lastLayout = this.graph.dagMode;
                 this.menu.config.currentLayout = newLayout;
                 this.graph.dagMode(newLayout);
+                this.requestedRecenter = true;
             } catch (error) {
                 console.error('Error updating graph layout:', error);
             }
@@ -1283,7 +1284,10 @@ class GraphVisualization {
 
         // fit to canvas when engine stops
         this.graph.onEngineStop(() => {
-            this.graph.zoomToFit(1000, 16);
+            if (this.requestedRecenter) {
+                this.graph.zoomToFit(1000, 16);
+                this.requestedRecenter = false;
+            }
         });
 
         this.graph.graphData(graphData);
