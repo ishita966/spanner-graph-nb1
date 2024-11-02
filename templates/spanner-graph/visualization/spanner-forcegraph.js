@@ -650,16 +650,50 @@ class GraphVisualization {
                 title.textContent = layoutButton.textContent;
             }
             
-            try {
+           try {
                 const newLayout = layoutButton.getAttribute('data-layout');
                 this.menu.config.lastLayout = this.graph.dagMode;
                 this.menu.config.currentLayout = newLayout;
+
+                let dagDistance;
+                let collisionRadius = 1; // Default collision radius
+
+                switch (newLayout) {
+                    case 'td': // Hierarchical: Top down
+                        dagDistance = Math.log10(this.store.config.nodes.length) * 50;
+                        collisionRadius = 12;
+                        this.menu.config.clusterBy = GraphVisualization.ClusterMethod.LABEL;
+                        break;
+                    case 'lr': // Hierarchical: Left-to-right
+                        dagDistance = Math.log10(this.store.config.nodes.length) * 100;
+                        collisionRadius = 12;
+                        break;
+                    case 'radialin': // Radial: Inward
+                        dagDistance = Math.log10(this.store.config.nodes.length) * 100;
+                        collisionRadius = 8;
+                        break;
+                    case 'radialout': // Radial: Outward
+                        dagDistance = Math.log10(this.store.config.nodes.length) * 100;
+                        collisionRadius = 8;
+                        break;
+                    default: // Force layout (default)
+                        dagDistance = 0; // Not applicable for force layout
+                        break;
+                }
+
                 this.graph.dagMode(newLayout);
+
+                // Set dagLevelDistance after setting dagMode
+                if (newLayout !== '') {
+                    this.graph.dagLevelDistance(dagDistance);
+                }
+
+                // Update d3Force collision
                 this.requestedRecenter = true;
+                this.graph.d3Force('collide', d3.forceCollide(collisionRadius));``
             } catch (error) {
                 console.error('Error updating graph layout:', error);
             }
-
         });
 
         this.menu.elements.showLabels = this.menuMount.querySelector('#show-labels');
@@ -805,14 +839,14 @@ class GraphVisualization {
         this.graph.calculateLineLengthByCluster = () => {
             this.graph
                 .d3Force('link').distance(link => {
-                    let distance = Math.log10(this.store.config.nodes.length) * 15;
+                    let distance = Math.log10(this.store.config.nodes.length) * 40;
 
                     // Only apply neighborhood clustering logic if using force layout
                     if (this.graph.dagMode() === '') {
-                        distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.5 : distance * 0.8;
+                        distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.75 : distance;
                     } else {
                         // For other layouts, you might want a different distance calculation
-                        distance = null; // Example: Fixed distance for non-force layouts
+                        distance = Math.log10(this.store.config.nodes.length) * 50; // Example: Fixed distance for non-force layouts
                     }
                     return distance;
                 });
@@ -1275,11 +1309,9 @@ class GraphVisualization {
             .onBackgroundClick(event => {
                 this.store.setSelectedObject(null);
             })
-            .d3Force('collide', d3.forceCollide(16))
             .calculateLineLengthByCluster()
             .drawNodes()
             .drawEdges()
-            .cooldownTicks(1000)
             .cooldownTime(1250);
 
         // fit to canvas when engine stops
