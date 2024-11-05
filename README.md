@@ -1,6 +1,6 @@
 # Spanner Graph Notebook: Explore Your Data Visually
 
-The Spanner Graph Notebook tool provides an efficient way you to query [Spanner Graph](https://cloud.google.com/spanner/docs/graph/overview) visually in a notebook environment (e.g. [Jupyter Notebook](https://jupyter.org/) and [Google Colab](https://colab.google/)). Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can visualize graph query results, examine the graph schema and inspect tabular results.
+The Spanner Graph Notebook tool provides an efficient way for you to query [Spanner Graph](https://cloud.google.com/spanner/docs/graph/overview) visually in a notebook environment (e.g. [Jupyter Notebook](https://jupyter.org/) and [Google Colab](https://colab.google/)). Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can visualize graph query results, examine the graph schema and inspect tabular results.
 
 <img src="./assets/full_viz.png" width="800"/>
 
