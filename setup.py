@@ -27,6 +27,9 @@ def package_files(directory):
 extra_files_assets = package_files('assets')
 extra_files_templates = package_files('templates')
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name="spanner-graph-notebook",
     version="1.0.0",
@@ -36,6 +39,9 @@ setup(
         "ipywidgets", "notebook"
     ],
     include_package_data=True,
+    description='Visually query Spanner Graph data in notebooks.',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     package_data={
         "": extra_files_templates + extra_files_assets,
         "spanner_graphs": [
