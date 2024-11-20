@@ -82,6 +82,18 @@ class Schema {
      */
     constructor(rawSchemaObject) {
         this.rawSchema = rawSchemaObject;
+
+        if (!this.rawSchema.edgeTables || !Array.isArray(this.rawSchema.edgeTables)) {
+            this.rawSchema.edgeTables = [];
+        }
+
+        if (!this.rawSchema.nodeTables || !Array.isArray(this.rawSchema.nodeTables)) {
+            this.rawSchema.nodeTables = [];
+        }
+
+        if (!this.rawSchema.propertyDeclarations || !Array.isArray(this.rawSchema.propertyDeclarations)) {
+            this.rawSchema.propertyDeclarations = [];
+        }
     }
 
     /**
@@ -129,6 +141,10 @@ class Schema {
 
         for (let i = 0; i < tables.length; i++) {
             const table = tables[i];
+            if (!table.labelNames || !Array.isArray(table.labelNames)) {
+                table.labelNames = [];
+            }
+
             if (!(table instanceof Object) ||
                 !(table.labelNames instanceof Array) ||
                 table.labelNames.length === 0) {
@@ -179,6 +195,10 @@ class Schema {
                     return declaration.type;
                 }
             }
+        }
+
+        if (!table.propertyDefinitions || !Array.isArray(table.propertyDefinitions)) {
+            table.propertyDefinitions = [];
         }
 
         for (let i = 0; i < table.propertyDefinitions.length; i++) {
