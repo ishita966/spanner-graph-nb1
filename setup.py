@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="spanner_graphs",
-    version="0.1",
+    version="1.0.0",
     packages=find_packages(),
     install_requires=[
         "networkx", "numpy", "google-cloud-spanner", "ipython",
