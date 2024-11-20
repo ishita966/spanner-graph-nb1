@@ -27,6 +27,17 @@ class Edge extends GraphObject {
     source;
 
     /**
+     * @typedef {Object} EdgeData - The label shown in the sidebar or graph.
+     * @property {string} label
+     * @property {string|Object} properties - An optional property:value map.
+     * @property {Object} key_property_names
+     * @property {string} color
+     * @property {number} from
+     * @property {number} to
+     * @property {number} id
+     */
+
+    /**
     * An edge is the line that connects two Nodes.
     *
     * @param {Object} params
@@ -45,8 +56,16 @@ class Edge extends GraphObject {
             return;
         }
 
-        this.target = to;
+        /**
+         * preserve ID from getting
+         * overwritten by ForceGraph
+         */
+        this.to = to;
+        this.from = from;
+
         this.source = from;
+        this.target = to;
+
         this.instantiated = true;
     }
 

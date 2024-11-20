@@ -40,6 +40,13 @@
  * @returns {void}
  */
 
+/**
+ * @callback ViewModeChangedCallback
+ * @param {ViewModes} ViewMode - The color scheme to use for nodes.
+ * @param {GraphConfig} config - The graph configuration.
+ * @returns {void}
+ */
+
 class GraphStore {
     /**
      * The configuration that the graph store is based on.
@@ -64,8 +71,16 @@ class GraphStore {
         CONFIG_CHANGE: Symbol('configChange'),
         FOCUS_OBJECT: Symbol('focusObject'),
         SELECT_OBJECT: Symbol('selectObject'),
-        COLOR_SCHEME: Symbol('colorScheme')
+        COLOR_SCHEME: Symbol('colorScheme'),
+        VIEW_MODE_CHANGE: Symbol('viewModeChange')
     });
+
+    static ViewModes = Object.freeze({
+        DEFAULT: Symbol('Default'),
+        SCHEMA: Symbol('Schema')
+    });
+
+    viewMode = GraphStore.ViewModes.DEFAULT;
 
     /**
      * Events that are broadcasted to GraphVisualization implementations. 
@@ -88,7 +103,11 @@ class GraphStore {
         /**
          * @type {GraphStore.EventTypes.COLOR_SCHEME, SelectedGraphColorSchemeCallback[]>}
          */
-        [GraphConfig.ColorScheme.COLOR_SCHEME]: []
+        [GraphConfig.ColorScheme.COLOR_SCHEME]: [],
+        /**
+         * @type {GraphStore.EventTypes.VIEW_MODE_CHANGE, ViewModeChangedCallback[]>}
+         */
+        [GraphStore.EventTypes.VIEW_MODE_CHANGE]: []
     };
 
     /**
@@ -114,6 +133,17 @@ class GraphStore {
         }
 
         this.eventListeners[eventType].push(callback);
+    }
+
+    /**
+     * @param {ViewModes} viewMode
+     */
+    setViewMode(viewMode) {
+        this.setFocusedObject(null);
+        this.setSelectedObject(null);
+        this.viewMode = viewMode;
+        this.eventListeners[GraphStore.EventTypes.VIEW_MODE_CHANGE]
+            .forEach(callback => callback(viewMode, this.config));
     }
 
     /**
@@ -164,11 +194,11 @@ class GraphStore {
             return [];
         }
 
-        return this.config.edges.filter(edge => edge.source === node || edge.target === node);
+        return this.getEdges().filter(edge => edge.source === node || edge.target === node);
     }
 
     getNodeById(id) {
-        return this.config.nodes.find(node => node.id === id);
+        return this.getNodes().find(node => node.id === id);
     }
 
     getNeighborsOfObject(graphObject) {
@@ -185,7 +215,7 @@ class GraphStore {
         }
     }
 
-    getNeighborsOfNode(node) {
+     getNeighborsOfNode(node) {
         if (!node || !node instanceof Node) {
             return [];
         }
@@ -255,12 +285,22 @@ class GraphStore {
             console.error('Node must have a label', node);
         }
 
-        let color = this.config.nodeColors[node.label];
-        if (!color) {
-            color = 'gray';
+        switch (this.viewMode) {
+            case GraphStore.ViewModes.SCHEMA:
+                const schemaColor = this.config.schemaNodeColors[node.label];
+                if (schemaColor) {
+                    return schemaColor;
+                }
+                break;
+            case GraphStore.ViewModes.DEFAULT:
+                const nodeColor = this.config.nodeColors[node.label];
+                if (nodeColor) {
+                    return nodeColor;
+                }
+                break;
         }
 
-        return color;
+        return 'rgb(100, 100, 100)';
     }
 
     /**
@@ -278,6 +318,34 @@ class GraphStore {
                 return this.getColorForNodeByLabel(node);
             default:
                 throw Error('Invalid color scheme', colorScheme);
+        }
+    }
+
+    /**
+     * @returns {Array<Node>|*[]}
+     */
+    getNodes() {
+        switch (this.viewMode) {
+            case GraphStore.ViewModes.DEFAULT:
+                return this.config.nodes;
+            case GraphStore.ViewModes.SCHEMA:
+                return this.config.schemaNodes;
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * @returns {Array<Edge>|*[]}
+     */
+    getEdges() {
+        switch (this.viewMode) {
+            case GraphStore.ViewModes.DEFAULT:
+                return this.config.edges;
+            case GraphStore.ViewModes.SCHEMA:
+                return this.config.schemaEdges;
+            default:
+                return [];
         }
     }
 

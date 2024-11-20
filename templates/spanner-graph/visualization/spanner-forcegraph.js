@@ -93,16 +93,9 @@ class GraphVisualization {
      */
     focusedNodeNeighbors = [];
 
-    /**
-     * @typedef {{ [key: GraphObject]: HTMLElement }} Tooltips
-     */
-    /** @type {Tooltips} */
-    tooltips = {};
-
     // The graph will only automatically center upon
     // the initial layout has finished.
     requestedRecenter = false;
-
 
     /**
      * @typedef {Object} ToolsConfig
@@ -118,6 +111,7 @@ class GraphVisualization {
      * @property {HTMLElement|null} recenter - The recenter button element.
      * @property {HTMLElement|null} zoomIn - The zoom in button element.
      * @property {HTMLElement|null} zoomOut - The zoom out button element.
+     * @property {HTMLElement|null} viewMode - The toggle element to switch view modes
      */
     /**
      * @typedef {Object} Tools
@@ -131,6 +125,7 @@ class GraphVisualization {
             recenter: null,
             zoomIn: null,
             zoomOut: null,
+            viewMode: null,
             toggleFullscreen: null
         },
         config: {
@@ -162,13 +157,17 @@ class GraphVisualization {
      *  {
      *  layout: {lastLayout: null,
      *  currentLayout: null},
-     *  elements: {cluster: null},
+     *  elements: {cluster: HTMLElement,
+     *  layoutDropdownToggle: HTMLElement,
+     *  layoutDropdownContent: HTMLElement},
      *  config: {clusterBy: symbol}
      *  }}
      */
     menu = {
         elements: {
-            cluster: null
+            cluster: null,
+            layoutDropdownToggle: null,
+            layoutDropdownContent: null,
         },
         config: {
             clusterBy: GraphVisualization.ClusterMethod.NEIGHBORHOOD
@@ -234,7 +233,7 @@ class GraphVisualization {
 
         this.graph.dagMode('');
 
-        this.render(this.store.config);
+        this.render();
     }
 
     sanitize(input) {
@@ -263,6 +262,9 @@ class GraphVisualization {
             throw Error('Store must be an instance of GraphStore');
         }
 
+        store.addEventListener(GraphStore.EventTypes.VIEW_MODE_CHANGE,
+            (viewMode, config) => this.onViewModeChange(viewMode, config));
+
         store.addEventListener(GraphStore.EventTypes.CONFIG_CHANGE,
             (config) => this.onStoreConfigChange(config));
 
@@ -272,6 +274,7 @@ class GraphVisualization {
                 this.focusedNodeEdges = [];
                 this.focusedNodeNeighbors = []
                 this.focusedEdge = null;
+                this.focusedEdgeNeighbors = [];
 
                 if (graphObject instanceof Node) {
                     this.onFocusedNodeChanged(graphObject)
@@ -297,10 +300,6 @@ class GraphVisualization {
                 if (graphObject instanceof Edge && graphObject) {
                     this.onSelectedEdgeChanged(graphObject);
                 }
-
-                if (!this.menu.config.showLabels) {
-                    this.refreshTooltips([graphObject]);
-                }
             });
 
         document.addEventListener('keydown', (event) => {
@@ -310,44 +309,24 @@ class GraphVisualization {
         });
     }
 
-    refreshTooltips(graphObjects) {
-        Object.keys(this.tooltips).forEach(key => {
-            this.tooltips[key].parentNode.removeChild(this.tooltips[key]);
-            delete this.tooltips[key];
+    /**
+     * @type ViewModeChangedCallback
+     */
+    onViewModeChange(viewMode, config) {
+        this.requestedRecenter = true;
+        this.graph.graphData({
+            nodes: this.store.getNodes(),
+            links: this._computeCurvature(this.store.getEdges())
         });
 
-        if (graphObjects.length === 0) {
-            return;
-        }
-
-        if (this.store.config.selectedGraphObject instanceof Edge) {
-            // If an edge is selected, only create tooltips for source and target
-            const edge = this.store.config.selectedGraphObject;
-            this.tooltips[edge.source.id] = this.createTooltip(edge.source);
-            this.tooltips[edge.target.id] = this.createTooltip(edge.target);
-        } else if (this.store.config.selectedGraphObject instanceof Node) {
-            graphObjects.forEach(graphObject => {
-                if (!graphObject || this.tooltips[graphObject.id]) {
-                    return;
-                }
-                this.tooltips[graphObject.id] = this.createTooltip(graphObject); 
-
-                if (this.store.config.selectedGraphObject instanceof Node) { 
-                    this.store.getNeighborsOfObject(graphObject).forEach(neighbor => {
-                        if (!neighbor || this.tooltips[neighbor.id]) {
-                            return;
-                        }
-                        this.tooltips[neighbor.id] = this.createTooltip(neighbor);
-                    });
-
-                    this.store.getEdgesOfObject(graphObject).forEach(edge => {
-                        if (!edge || this.tooltips[edge.id]) {
-                            return;
-                        }
-                        this.tooltips[edge.id] = this.createTooltip(edge);
-                    });
-                }
-            });
+        this.menu.elements.layoutDropdownContent.classList.remove('disabled');
+        this.menu.elements.layoutDropdownToggle.classList.remove('disabled');
+        if (viewMode === GraphStore.ViewModes.SCHEMA) {
+            this.graph.dagMode('');
+            this.menu.elements.layoutDropdownContent.classList.add('disabled');
+            this.menu.elements.layoutDropdownToggle.classList.add('disabled');
+        } else {
+            this.graph.dagMode(this.menu.config.currentLayout);
         }
     }
 
@@ -455,6 +434,7 @@ class GraphVisualization {
                     display: flex;
                     align-items: center;
                     height: 100%;
+                    margin-left: 10px;
                 }
                 .toggle-switch {
                     position: relative;
@@ -540,6 +520,14 @@ class GraphVisualization {
                     text-align: left;
                     width: 260px;
                 }
+                
+                .dropdown-toggle.disabled {
+                    background: url("data:image/svg+xml;utf8,<svg fill='rgba(73, 80, 87, .6)' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat;
+                    background-position: right 10px center;
+                    background-color: #EBEBE4;
+                    border: 1px solid #EBEBE4;
+                    cursor: default;
+                }
 
                 .arrow-down {
                     margin-left: 5px;
@@ -557,7 +545,7 @@ class GraphVisualization {
                     padding: 8px 0;
                 }
 
-                .dropdown:hover .dropdown-content {
+                .dropdown:hover .dropdown-content:not(.disabled) {
                     display: block;
                 }
 
@@ -628,6 +616,13 @@ class GraphVisualization {
                 </div>
                 <div class="toggle-container">
                     <label class="toggle-switch">
+                        <input id="view-schema" type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">View Schema</span>
+                </div>
+                <div class="toggle-container">
+                    <label class="toggle-switch">
                         <input id="show-labels" type="checkbox">
                         <span class="toggle-slider"></span>
                     </label>
@@ -636,8 +631,9 @@ class GraphVisualization {
             </div>`
 
         this.menu.elements.layoutButtons = this.menuMount.querySelectorAll('.dropdown-item');
-        
-        this.menuMount.querySelector('.dropdown-content').addEventListener('click', e => {
+        this.menu.elements.layoutDropdownToggle = this.menuMount.querySelector('.dropdown-toggle');
+        this.menu.elements.layoutDropdownContent = this.menuMount.querySelector('.dropdown-content');
+        this.menu.elements.layoutDropdownContent.addEventListener('click', e => {
             const title = this.menuMount.querySelector('.dropdown-toggle');
             const layoutButton = e.target.closest('.dropdown-item');
             if (!layoutButton) return;
@@ -696,53 +692,17 @@ class GraphVisualization {
             }
         });
 
+        this.menu.elements.viewSchema = this.menuMount.querySelector('#view-schema');
+        this.menu.elements.viewSchema.addEventListener('change', () => {
+            const viewMode = this.menu.elements.viewSchema.checked ?
+                GraphStore.ViewModes.SCHEMA : GraphStore.ViewModes.DEFAULT;
+            this.store.setViewMode(viewMode);
+        });
+
         this.menu.elements.showLabels = this.menuMount.querySelector('#show-labels');
         this.menu.elements.showLabels.addEventListener('change', () => {
             this.menu.config.showLabels = this.menu.elements.showLabels.checked;
-
-            if (this.menu.config.showLabels) {
-                // Pass an array of all nodes and edges to refreshTooltips
-                this.refreshTooltips(this.graph.graphData().nodes);
-            } else {
-                this.refreshTooltips([this.store.config.selectedGraphObject]);
-            }
         });
-    }
-
-    createTooltip(node) {
-        const container = document.querySelector('.force-graph-container');
-        const toolTipElem = document.createElement('div');
-        toolTipElem.style.backgroundColor = this.store.getColorForNode(node); // Use node color
-        toolTipElem.style.borderRadius = '.25rem';
-        toolTipElem.style.color = 'white';
-        toolTipElem.style.position = 'absolute';
-        toolTipElem.style.visibility = 'visible';
-        toolTipElem.style.pointerEvents = 'none';
-        toolTipElem.style.padding = '4px 8px';
-        toolTipElem.style.fontSize = '12px';
-        toolTipElem.style.color = '#FFF';
-
-        let tipContent = ``;
-
-        if (node.properties && node.key_property_names) {
-            if (node.key_property_names.length === 1) {
-                const propName = node.key_property_names[0];
-                if (node.properties.hasOwnProperty(propName)) {
-                    tipContent = `<div>${this.sanitize(node.properties[propName])}</div>`;
-                }
-            } else {
-                for (const key of node.key_property_names) {
-                    if (node.properties.hasOwnProperty(key)) {
-                        tipContent += `<div>${key}: ${this.sanitize(node.properties[key])}</div>`
-                    }
-                }
-            }
-        }
-
-        toolTipElem.innerHTML = tipContent;
-        container.appendChild(toolTipElem);
-
-        return toolTipElem;
     }
 
     /**
@@ -750,19 +710,21 @@ class GraphVisualization {
      * @param {GraphConfig} config - The new configuration.
     */
     onStoreConfigChange(config) {
-        this.render(config);
+        this.render();
     }
 
     onSelectedEdgeChanged(edge) {
         this.selectedEdge = edge;
         this.selectedEdgeNeighbors = [];
 
+        if (!this.selectedEdge) {
+            this.selectedEdge = null;
+            return;
+        }
+
         this.selectedEdgeNeighbors = [
             edge.source, edge.target
         ];
-        this.store.setFocusedObject(edge.source); 
-        this.store.setFocusedObject(edge.target);
-        this.refreshTooltips(this.selectedEdgeNeighbors); 
     }
 
     onSelectedNodeChanged(node) {
@@ -794,9 +756,9 @@ class GraphVisualization {
 
     onFocusedEdgeChanged(edge) {
         this.focusedEdge = edge;
-        this.focusedNodeNeighbors = [];
+        this.focusedEdgeNeighbors = [];
 
-        if (!this.focusedEdge) {
+        if (!edge) {
             // There are multiple conditions that will trigger a false here,
             // and we want to enforce null type.
             this.focusedEdge = null;
@@ -804,9 +766,9 @@ class GraphVisualization {
         }
 
         this.focusedEdgeNeighbors = [
-            this.focusedEdge.source,
-            this.focusedEdge.target
-        ]
+            edge.source,
+            edge.target
+        ];
     }
 
     /**
@@ -842,11 +804,10 @@ class GraphVisualization {
                     let distance = Math.log10(this.store.config.nodes.length) * 40;
 
                     // Only apply neighborhood clustering logic if using force layout
-                    if (this.graph.dagMode() === '') {
-                        distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.75 : distance;
-                    } else {
-                        // For other layouts, you might want a different distance calculation
-                        distance = Math.log10(this.store.config.nodes.length) * 50; // Example: Fixed distance for non-force layouts
+                    if (this.store.config.nodes.length !== 0 && (this.store.viewMode === GraphStore.ViewModes.SCHEMA || this.graph.dagMode() !== '')) {
+                        distance = Math.log10(this.store.config.nodes.length) * 50;
+                    } else if (this.graph.dagMode() === '') {
+                        distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.5 : distance * 0.8;
                     }
                     return distance;
                 });
@@ -854,21 +815,25 @@ class GraphVisualization {
         }
     }
 
-    _setupDrawEdges(graph) {
+    _computeCurvature(links) {
         let selfLoopLinks = {};
         let sameNodesLinks = {};
-        const curvatureMinMax = 0.25;
+        const curvatureMinMax = 0.35;
 
         // 1. assign each link a nodePairId that combines their source and target independent of the links direction
         // 2. group links together that share the same two nodes or are self-loops
-        this.store.config.edges.forEach(link => {
-            link.nodePairId = link.source <= link.target ? (link.source + "_" + link.target) : (link.target + "_" + link.source);
-            let map = link.source === link.target ? selfLoopLinks : sameNodesLinks;
+        for (let i = 0; i < links.length; i++) {
+            const link = links[i];
+            const sourceId = link.from;
+            const targetId = link.to;
+            link.curvature = 0;
+            link.nodePairId = sourceId <= targetId ? (sourceId + "_" + targetId) : (targetId + "_" + sourceId);
+            let map = sourceId === targetId ? selfLoopLinks : sameNodesLinks;
             if (!map[link.nodePairId]) {
                 map[link.nodePairId] = [];
             }
             map[link.nodePairId].push(link);
-        });
+        }
 
         // Compute the curvature for self-loop links to avoid overlaps
         Object.keys(selfLoopLinks).forEach(id => {
@@ -889,18 +854,20 @@ class GraphVisualization {
             lastLink.curvature = curvatureMinMax;
             let delta = 2 * curvatureMinMax / lastIndex;
             for (let i = 0; i < lastIndex; i++) {
+                const link = links[i];
                 links[i].curvature = - curvatureMinMax + i * delta;
-                if (lastLink.source !== links[i].source) {
+                if (lastLink.from !== links[i].from) {
                     links[i].curvature *= -1; // flip it around, otherwise they overlap
                 }
             }
         });
 
+        return links;
+    }
+
+    _setupDrawEdges(graph) {
         graph.drawEdges = (node, ctx, globalScale) => {
             this.graph
-                // this will be extracted to a wrapper function for
-                // curvature heuristic
-                .linkCurvature(link => link.curvature)
                 // this will be extracted to a wrapper function for
                 // -> hiding labels upon zooming out past a threshold
                 // -> hide when large amount of edges shown
@@ -975,15 +942,15 @@ class GraphVisualization {
                      * @param {number} globalScale - The global scale of the graph
                      */
                     (node, ctx, globalScale) => {
-
                         let lightenAmount = 0;
+                        const defaultLightenAmount = 0.64;
 
-                        // If a node is selected OR hovered...
+                        // If a node is selected or focused...
                         if (this.store.config.selectedGraphObject instanceof Node ||
                             this.store.config.focusedGraphObject instanceof Node) {
 
                             // Lighten all nodes...
-                            lightenAmount = 0.64;
+                            lightenAmount = defaultLightenAmount;
 
                             // ...unless it's the selected or hovered node itself...
                             if (node === this.store.config.selectedGraphObject ||
@@ -997,13 +964,14 @@ class GraphVisualization {
                             }
                         }
 
-                        // If an edge is selected...
-                        if (this.store.config.selectedGraphObject instanceof Edge) {
-                            // Lighten all nodes...
-                            lightenAmount = 0.64;
+                        // If an edge is selected or focused...
+                        if (this.store.config.selectedGraphObject instanceof Edge ||
+                            this.store.config.focusedGraphObject instanceof Edge) {
+                            lightenAmount = defaultLightenAmount;
 
-                            // ...unless they are connected to the selected edge.
-                            if (this.selectedEdgeNeighbors.includes(node)) {
+                            // If the node is a neighbor of a focused or selected edge
+                            if (this.focusedEdgeNeighbors.includes(node) ||
+                                this.selectedEdgeNeighbors.includes(node)) {
                                 lightenAmount = 0;
                             }
                         }
@@ -1035,7 +1003,6 @@ class GraphVisualization {
                         ctx.fillStyle = this.store.getColorForNode(node);
                         ctx.fill();
 
-
                         // lighten the node color
                         if (lightenAmount > 0) {
                             ctx.beginPath();
@@ -1044,18 +1011,65 @@ class GraphVisualization {
                             ctx.fill();
                         }
 
-                        if (!this.tooltips[node.id]) {
+                        const showLabel = this.menu.config.showLabels ||
+                            node === this.store.config.selectedGraphObject ||
+                            node === this.store.config.focusedGraphObject ||
+                            this.selectedNodeNeighbors.includes(node) ||
+                            this.focusedNodeNeighbors.includes(node) ||
+                            this.focusedEdgeNeighbors.includes(node) ||
+                            this.selectedEdgeNeighbors.includes(node) ||
+                            isFocusedOrHovered ||
+                            this.store.viewMode === GraphStore.ViewModes.SCHEMA;
+                        if (!showLabel) {
                             return;
                         }
 
-                        // position the tooltip over the node
-                        const coords = this.graph.graph2ScreenCoords(node.x, node.y);
-                        const tooltipHeight = this.tooltips[node.id].offsetHeight;
-                        const tooltipWidth = this.tooltips[node.id].offsetWidth;
-                        const x = coords.x - (tooltipWidth / 2);
-                        const y = coords.y - (tooltipHeight * 0.5);
-                        this.tooltips[node.id].style.top = `${y}px`;
-                        this.tooltips[node.id].style.left = `${x}px`;
+                        // Init label
+                        ctx.save();
+                        ctx.translate(node.x, node.y);
+                        const fontSize = 2;
+                        ctx.font = `${fontSize}px Sans-Serif`;
+
+                        // Draw the label's background
+                        const padding = 1;
+                        const textRect = ctx.measureText(node.label);
+                        const rectX = this.getNodeRelativeSize() + padding * 0.5;
+                        const rectWidth = textRect.width + padding;
+                        const rectHeight = fontSize + padding;
+                        const rectY = -rectHeight * 0.5;
+                        const borderRadius = padding * 0.5;
+
+                        ctx.fillStyle = this.store.getColorForNode(node); // Teal color similar to the image
+                        ctx.beginPath();
+                        ctx.roundRect(
+                            rectX,
+                            rectY,
+                            rectWidth,
+                            rectHeight, borderRadius);
+                        ctx.fill();
+
+                        // lighten the background
+                        if (lightenAmount > 0) {
+                            ctx.fillStyle = `rgba(255, 255, 255, ${lightenAmount})`;
+                            ctx.beginPath();
+                            ctx.roundRect(
+                                rectX,
+                                rectY,
+                                rectWidth,
+                                rectHeight, borderRadius);
+                            ctx.fill();
+                        }
+
+                        // Draw the label text
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#fff';
+                        ctx.fillText(
+                            node.label,
+                            rectX + rectWidth * 0.5,
+                            -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25);
+
+                        ctx.restore();
                     });
 
             return graph;
@@ -1124,8 +1138,9 @@ class GraphVisualization {
                               return true; // Always show label for focused edge
                             }
                           
-                            // 2. Show label if a node is selected and the edge is connected to it
-                            if (this.selectedNode && this.store.edgeIsConnectedToSelectedNode(link)) {
+                            // 2. Show label if a node is connected to a focused or selected node
+                            if (this.selectedNode && this.store.edgeIsConnectedToSelectedNode(link) ||
+                                this.focusedNode && this.store.edgeIsConnectedToFocusedNode(link)) {
                               return true;
                             }
                           
@@ -1141,7 +1156,12 @@ class GraphVisualization {
                               return true;
                             }
 
-                            // 5. Otherwise, hide the label
+                            // 5. Always show the label if "Show Labels" is selected
+                            if (this.menu.config.showLabels) {
+                                return true;
+                            }
+
+                            // Otherwise, hide the label
                             return false;
                         };
 
@@ -1162,19 +1182,50 @@ class GraphVisualization {
                         // Get control points
                         const controlPoints = link.__controlPoints;
 
+                        const getQuadraticXYFourWays = (
+                            t,
+                            sx,
+                            sy,
+                            cp1x,
+                            cp1y,
+                            cp2x,
+                            cp2y,
+                            ex,
+                            ey,
+                          ) => {
+                            return {
+                              x:
+                                (1 - t) * (1 - t) * (1 - t) * sx +
+                                3 * (1 - t) * (1 - t) * t * cp1x +
+                                3 * (1 - t) * t * t * cp2x +
+                                t * t * t * ex,
+                              y:
+                                (1 - t) * (1 - t) * (1 - t) * sy +
+                                3 * (1 - t) * (1 - t) * t * cp1y +
+                                3 * (1 - t) * t * t * cp2y +
+                                t * t * t * ey,
+                            };
+                          };
+
+                        const selfLoop = link.source === link.target;
+
                         if (link.curvature !== 0 && controlPoints) {
-                            if (link.source === link.target) {
+                            const time = 0.5;
+                            if (selfLoop) {
                                 // Self-loop
-                                textPos = {
-                                    x: controlPoints[0] + (controlPoints[2] - controlPoints[0]) * 0.5,
-                                    y: controlPoints[1] + (controlPoints[3] - controlPoints[1]) * 0.5
-                                };
+                                textPos = getQuadraticXYFourWays(
+                                    time, link.source.x, link.source.y,
+                                    controlPoints[0],
+                                    controlPoints[1],
+                                    controlPoints[2],
+                                    controlPoints[3],
+                                    link.target.x, link.target.y,
+                                );
                             } else {
                                 // Use midpoint of quadratic Bezier curve
-                                const t = 0.5;
                                 textPos = {
-                                    x: Math.pow(1 - t, 2) * start.x + 2 * (1 - t) * t * controlPoints[0] + Math.pow(t, 2) * end.x,
-                                    y: Math.pow(1 - t, 2) * start.y + 2 * (1 - t) * t * controlPoints[1] + Math.pow(t, 2) * end.y
+                                    x: Math.pow(1 - time, 2) * start.x + 2 * (1 - time) * time * controlPoints[0] + Math.pow(time, 2) * end.x,
+                                    y: Math.pow(1 - time, 2) * start.y + 2 * (1 - time) * time * controlPoints[1] + Math.pow(time, 2) * end.y
                                 };
                             }
                         }
@@ -1187,9 +1238,13 @@ class GraphVisualization {
                         // Calculate font size based on link length
                         let label = link.label;
                         let labelTail = '';
-                        const relLink = { x: end.x - start.x, y: end.y - start.y };
-                        const linkLength = Math.sqrt(relLink.x * relLink.x + relLink.y * relLink.y);
-                        const maxTextLength = linkLength - 5;
+
+                        let maxTextLength = 50;
+                        if (!selfLoop) {
+                            const relLink = { x: end.x - start.x, y: end.y - start.y };
+                            const linkLength = Math.sqrt(relLink.x * relLink.x + relLink.y * relLink.y);
+                            maxTextLength = linkLength - 5;
+                        }
 
                         const fontSize = 2;
                         // Set text style based on focus OR selection
@@ -1250,15 +1305,14 @@ class GraphVisualization {
 
     /**
      * Renders the graph visualization.
-     * @param {GraphConfig} config - The configuration to render.
      */
-    render(config) {
+    render() {
         this.requestedRecenter = true;
 
         const graphData = {
-            nodes: config.nodes,
-            links: config.edges
-        }
+            nodes: this.store.getNodes(),
+            links: this._computeCurvature(this.store.getEdges())
+        };
 
         const offscreenCanvas = document.createElement('canvas');
         offscreenCanvas.width = this.mount.offsetWidth;
@@ -1273,9 +1327,6 @@ class GraphVisualization {
             .height(this.mount.clientHeight)
             .nodeId('id')
             .nodeVal('value')
-            .nodeLabel(node => {
-                return this._generateGraphElementTooltip(node);
-            })
             .nodeColor('color')
             .linkSource('source')
             .linkTarget('target')

@@ -16,6 +16,24 @@
 class GraphConfig {
 
     /**
+     * The array of node objects to be rendered. 123123123
+     * @type {Schema}
+     */
+    schema = null;
+
+    /**
+     * The array of node objects to be rendered.
+     * @type {Array<Node>}
+     */
+    schemaNodes = [];
+
+    /**
+     * The array of edge objects to be rendered.
+     * @type {Array<Edge>}
+     */
+    schemaEdges = [];
+
+    /**
      * The array of node objects to be rendered.
      * @type {Array<Node>}
      */
@@ -64,6 +82,8 @@ class GraphConfig {
 
     // [label: string]: colorString
     nodeColors = {};
+    // [label: string]: colorString
+    schemaNodeColors = {};
 
     edgeDesign = {
         default: {
@@ -100,10 +120,13 @@ class GraphConfig {
      * @param {Array} [config.colorPalette] - An optional array of colors to use as the color palette.
      * @param {GraphConfig.ColorScheme} [config.colorScheme] - Color scheme can be optionally declared.
      * @param {Array} [config.rowsData] - Raw row data from Spanner
+     * @param {RawSchema} config.schemaData - Raw schema data from Spanner
      */
-    constructor({ nodesData, edgesData, colorPalette, colorScheme, rowsData }) {
+    constructor({ nodesData, edgesData, colorPalette, colorScheme, rowsData, schemaData}) {
         this.nodes = this.parseNodes(nodesData);
         this.edges = this.parseEdges(edgesData);
+        this.nodeColors = this.assignColors(this.nodes);
+        this.parseSchema(schemaData);
 
         if (colorPalette && Array.isArray(colorPalette)) {
             this.colorPalette = colorPalette;
@@ -114,18 +137,23 @@ class GraphConfig {
         }
 
         this.rowsData = rowsData;
-
-        this.assignColors(this.nodes);
     }
 
+    /**
+     * @param nodes
+     * @returns {{}} Color map by the node's label
+     */
     assignColors(nodes) {
+        const colors = {};
+        const colorPalette = this.colorPalette.map(color => color);
+
         if (!nodes || !nodes instanceof Array) {
             console.error('Nodes must be array', nodes);
             throw Error('Nodes must be an array');
         }
 
         nodes.forEach(node => {
-            if (this.colorPalette.length === 0) {
+            if (colorPalette.length === 0) {
                 console.error('Node labels exceed the color palette. Assigning default color.');
                 return;
             }
@@ -141,15 +169,73 @@ class GraphConfig {
                 return;
             }
 
-            if (!this.nodeColors[label]) {
-                this.nodeColors[label] = this.colorPalette.shift();
+            if (!colors[label]) {
+                colors[label] = colorPalette.shift();
             }
         });
+
+        return colors;
+    }
+
+    /**
+     * Parses schema data into nodes and edges
+     * @param {RawSchema} schemaData - The raw data representing a schema
+     * @throws {Error} Throws an error if the schema data can not be parsed
+     */
+    parseSchema(schemaData) {
+        this.schema = new Schema(schemaData);
+
+        const nodesData = this.schema.rawSchema.nodeTables.map(
+            /**
+             * @param {NodeTable} nodeTable
+             * @returns {NodeData}
+             */
+            (nodeTable, i) => {
+                const name = this.schema.getDisplayName(nodeTable)
+
+                /**
+                 * @type {NodeData}
+                 */
+                return {
+                    label: name,
+                    properties: this.schema.getPropertiesOfTable(nodeTable),
+                    color: 'rgb(0, 0, 100)', // this isn't used
+                    key_property_names: ['id'],
+                    id: this.schema.getNodeTableId(nodeTable)
+                };
+            }
+        );
+        this.schemaNodes = this.parseNodes(nodesData);
+
+        const edgesData = this.schema.rawSchema.edgeTables.map(
+            /**
+             * @param {EdgeTable} edgeTable
+             * @returns {EdgeData}
+             */
+            (edgeTable, i) => {
+                const connectedNodes = this.schema.getNodesOfEdges(edgeTable);
+                const name = this.schema.getDisplayName(edgeTable)
+
+                /**
+                 * @type {EdgeData}
+                 */
+                return {
+                    label: name,
+                    properties: this.schema.getPropertiesOfTable(edgeTable),
+                    color: 'rgb(0, 0, 100)', // this isn't used
+                    to: this.schema.getNodeTableId(connectedNodes.to),
+                    from: this.schema.getNodeTableId(connectedNodes.from),
+                    key_property_names: ['id'],
+                    id: this.schema.getEdgeTableId(edgeTable)
+                };
+        });
+        this.schemaEdges = this.parseEdges(edgesData);
+        this.schemaNodeColors = this.assignColors(this.schemaNodes);
     }
 
     /**
      * Parses an array of node data, instantiates nodes, and adds them to the graph.
-     * @param {Array} nodesData - An array of objects representing the data for each node.
+     * @param {Array<NodeData>} nodesData - An array of objects representing the data for each node.
      * @throws {Error} Throws an error if `nodesData` is not an array.
      */
     parseNodes(nodesData) {

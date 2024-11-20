@@ -1,4 +1,4 @@
-<!-- 
+<!--
 Copyright 2024 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@ limitations under the License.
     <script>
         const namespace = 'spanner';
         const importOrder = [
+            `models/schema.js`,
             `models/graph-object.js`,
             `models/node.js`,
             `models/edge.js`,
@@ -39,6 +40,7 @@ limitations under the License.
         window[namespace] = {};
 
         try {
+            {{ schema_content | safe }}
             {{ graph_object_content | safe }}
             {{ node_content | safe }}
             {{ edge_content | safe }}
@@ -98,6 +100,10 @@ limitations under the License.
         }
 
         #graph-container {
+            background-color: #FBFDFF;
+        }
+
+        #graph-container.dots {
             background-image: url('data:image/svg+xml;base64,{{ graph_background_image }}');
             background-repeat: repeat;
         }
@@ -164,10 +170,11 @@ limitations under the License.
             const nodes = {{ nodes| tojson }};
             const edges = {{ edges| tojson }};
             const rows = {{ rows| tojson }} || [];
-            renderGraph({ nodes, edges, rows });
+            const schema = {{ schema| tojson }};
+            renderGraph({ nodes, edges, rows, schema });
         });
 
-        const renderGraph = ({ nodes, edges, rows }) => {
+        const renderGraph = ({ nodes, edges, rows, schema }) => {
             const fixedEdges = edges.map(edge => ({
                 ...edge,
                 to: edge.to instanceof Number ? edge.to : edge.target,
@@ -178,7 +185,8 @@ limitations under the License.
                 nodesData: nodes,
                 edgesData: fixedEdges,
                 colorScheme: window[namespace].GraphConfig.ColorScheme.LABEL,
-                rowsData: rows
+                rowsData: rows,
+                schemaData: schema
             });
             const graphStore = new window[namespace].GraphStore(graphConfig);
 
@@ -186,6 +194,15 @@ limitations under the License.
             const graphVisualization = new window[namespace].GraphVisualization(graphStore,
                 document.getElementById('force-graph'),
                 document.getElementById('graph-menu'));
+
+            const graphContainer = document.getElementById('graph-container');
+            graphContainer.className =
+                graphStore.viewMode === window[namespace].GraphStore.ViewModes.DEFAULT ? 'dots' : '';
+
+            graphStore.addEventListener(window[namespace].GraphStore.EventTypes.VIEW_MODE_CHANGE,
+                (viewMode, config) => {
+                    graphContainer.className = viewMode === window[namespace].GraphStore.ViewModes.DEFAULT ? 'dots' : '';
+                });
         };
     </script>
 </body>

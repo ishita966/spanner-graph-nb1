@@ -40,6 +40,15 @@ class Node extends GraphObject {
     color = '#ec0001'
 
     /**
+     * @typedef {Object} NodeData - The label shown in the sidebar or graph.
+     * @property {string} label
+     * @property {Object} properties - An optional property:value map.
+     * @property {Object} key_property_names
+     * @property {string} color
+     * @property {number} id
+     */
+
+    /**
     * A node on the graph
     *
     * @param {Object} params
