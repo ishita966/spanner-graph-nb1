@@ -14,10 +14,21 @@
 
 """Setup tools"""
 
+import os
 from setuptools import setup, find_packages
 
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join('..', path, filename))
+    return paths
+
+extra_files_assets = package_files('assets')
+extra_files_templates = package_files('templates')
+
 setup(
-    name="spanner_graphs",
+    name="spanner-graph-notebook",
     version="1.0.0",
     packages=find_packages(),
     install_requires=[
@@ -25,6 +36,16 @@ setup(
         "ipywidgets", "notebook"
     ],
     include_package_data=True,
+    package_data={
+        "": extra_files_templates + extra_files_assets,
+        "spanner_graphs": [
+            "graph_mock_data.csv",
+            "graph_mock_schema.json",
+        ],
+        "tests": [
+            "test_notebook.json",
+        ],
+    },
     entry_points={
         "console_scripts": [],
     },
