@@ -60,5 +60,3 @@ class GraphObject {
         this.instantiated = true;
     }
 }
-
-window[namespace].GraphObject = GraphObject;

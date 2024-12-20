@@ -73,5 +73,3 @@ class Edge extends GraphObject {
         return Number.isFinite(Number(value));
     }
 }
-
-window[namespace].Edge = Edge;

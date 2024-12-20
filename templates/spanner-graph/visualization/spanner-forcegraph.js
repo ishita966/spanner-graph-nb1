@@ -159,7 +159,8 @@ class GraphVisualization {
      *  currentLayout: null},
      *  elements: {cluster: HTMLElement,
      *  layoutDropdownToggle: HTMLElement,
-     *  layoutDropdownContent: HTMLElement},
+     *  layoutDropdownContent: HTMLElement,
+     *  elementCount: HTMLElement},
      *  config: {clusterBy: symbol}
      *  }}
      */
@@ -168,6 +169,7 @@ class GraphVisualization {
             cluster: null,
             layoutDropdownToggle: null,
             layoutDropdownContent: null,
+            elementCount: null,
         },
         config: {
             clusterBy: GraphVisualization.ClusterMethod.NEIGHBORHOOD
@@ -319,12 +321,14 @@ class GraphVisualization {
             links: this._computeCurvature(this.store.getEdges())
         });
 
-        this.menu.elements.layoutDropdownContent.classList.remove('disabled');
-        this.menu.elements.layoutDropdownToggle.classList.remove('disabled');
+        this.menu.elements.layoutDropdownContent.classList.remove('disabled', 'hidden');
+        this.menu.elements.layoutDropdownToggle.classList.remove('disabled', 'hidden');
+        this.menu.elements.elementCount.classList.remove('hidden');
         if (viewMode === GraphStore.ViewModes.SCHEMA) {
             this.graph.dagMode('');
-            this.menu.elements.layoutDropdownContent.classList.add('disabled');
-            this.menu.elements.layoutDropdownToggle.classList.add('disabled');
+            this.menu.elements.layoutDropdownContent.classList.add('disabled', 'hidden');
+            this.menu.elements.layoutDropdownToggle.classList.add('disabled', 'hidden');
+            this.menu.elements.elementCount.classList.add('hidden');
         } else {
             this.graph.dagMode(this.menu.config.currentLayout);
         }
@@ -347,9 +351,11 @@ class GraphVisualization {
                     <path d="M480-320q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-480q0-33-23.5-56.5T480-560q-33 0-56.5 23.5T400-480q0 33 23.5 56.5T480-400Zm0-80ZM200-120q-33 0-56.5-23.5T120-200v-160h80v160h160v80H200Zm400 0v-80h160v-160h80v160q0 33-23.5 56.5T760-120H600ZM120-600v-160q0-33 23.5-56.5T200-840h160v80H200v160h-80Zm640 0v-160H600v-80h160q33 0 56.5 23.5T840-760v160h-80Z"/>
                 </svg>
             </button>
-            <button id="graph-fullscreen" title="Toggle Fullscreen">
-                ${this.enterFullscreenSvg}
-            </button>`;
+            ${typeof google !== 'undefined' ? '' : `
+                <button id="graph-fullscreen" title="Toggle Fullscreen">
+                    ${this.enterFullscreenSvg}
+                </button>
+            `}`;
 
         this.tools.elements.container = document.createElement('div');
         this.tools.elements.container.id = 'graph-tools';
@@ -371,51 +377,76 @@ class GraphVisualization {
             graphObject.zoom(graphObject.zoom() * this.tools.config.zoomOutIncrement, this.tools.config.zoomOutSpeed);
         });
 
-        this.tools.elements.toggleFullscreen = this.tools.elements.container.querySelector('#graph-fullscreen');
-        window.addEventListener('fullscreenchange', () => {
+        if (typeof google === 'undefined') {
+            this.tools.elements.toggleFullscreen = this.tools.elements.container.querySelector('#graph-fullscreen');
+
+            const debounce = (callback, timeout = 300) => {
+                let timer = 0;
+                return (...args) => {
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(() => {
+                        callback.apply(this, args);
+                    }, timeout);
+                }
+            }
+
+            const fullscreenMount = this.mount.parentElement.parentElement.parentElement;
+
+            window.addEventListener('fullscreenchange', debounce((e) => {
+                if (fullscreenMount !== e.target) {
+                    return;
+                }
+
                 if (!document.fullscreenElement) {
-                    this.mount.style.width = window.innerWidth + 'px';
-                    this.mount.style.height = document.querySelector('body').innerHeight + 'px';
+                    this.mount.style.width = '100%';
+                    this.mount.style.height = '616px';
                     this.graph.width(this.mount.offsetWidth);
                     this.graph.height(this.mount.offsetHeight);
                 } else {
+                    const height = window.innerHeight - this.menuMount.offsetHeight;
                     this.mount.style.width = window.innerWidth + 'px';
-                    this.mount.style.height = document.querySelector('body').innerHeight + 'px';
+                    this.mount.style.height = height + 'px';
                     this.graph.width(this.mount.offsetWidth);
-                    this.graph.height(this.mount.offsetHeight);
+                    this.graph.height(height);
                 }
-        });
+            }));
 
-        this.tools.elements.toggleFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                this.tools.elements.toggleFullscreen.innerHTML = this.exitFullscreenSvg;
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen();
-                } else if (document.documentElement.mozRequestFullScreen) { // Firefox
-                    document.documentElement.mozRequestFullScreen();
-                } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari and Opera
-                    document.documentElement.webkitRequestFullscreen();
-                } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
-                    document.documentElement.msRequestFullscreen();
+            this.tools.elements.toggleFullscreen.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    this.tools.elements.toggleFullscreen.innerHTML = this.exitFullscreenSvg;
+                    if (fullscreenMount.requestFullscreen) {
+                        fullscreenMount.requestFullscreen();
+                    } else if (fullscreenMount.mozRequestFullScreen) { // Firefox
+                        fullscreenMount.mozRequestFullScreen();
+                    } else if (fullscreenMount.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                        fullscreenMount.webkitRequestFullscreen();
+                    } else if (fullscreenMount.msRequestFullscreen) { // IE/Edge
+                        fullscreenMount.msRequestFullscreen();
+                    }
+                } else {
+                    this.tools.elements.toggleFullscreen.innerHTML = this.enterFullscreenSvg;
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
                 }
-            } else {
-                this.tools.elements.toggleFullscreen.innerHTML = this.enterFullscreenSvg;
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        });
+            });
+        }
     }
 
     _setupMenu() {
         this.menuMount.innerHTML = `
             <style>
+                header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
                 .menu-bar {
                     align-items: center;
                     border-bottom: 1px solid #DADCE0;
@@ -429,6 +460,9 @@ class GraphVisualization {
                 .menu-item {
                     display: flex;
                     margin-right: 16px;
+                }
+                .menu-bar .hidden {
+                    visibility: hidden;
                 }
                 .toggle-container {
                     display: flex;
@@ -501,7 +535,7 @@ class GraphVisualization {
                     padding: 0 !important;
                 }
 
-                .dropdown {
+                .menu-bar .dropdown {
                     margin-right: 16px;
                     position: relative;
                 }
@@ -534,7 +568,7 @@ class GraphVisualization {
                     font-size: 10px;
                 }
 
-                .dropdown-content {
+                .menu-bar .dropdown .dropdown-content {
                     display: none;
                     position: absolute;
                     background-color: #fff;
@@ -545,11 +579,11 @@ class GraphVisualization {
                     padding: 8px 0;
                 }
 
-                .dropdown:hover .dropdown-content:not(.disabled) {
+                .menu-bar .dropdown:hover .dropdown-content:not(.disabled) {
                     display: block;
                 }
 
-                .dropdown-item {
+                .menu-bar .dropdown .dropdown-item {
                     color: #495057;
                     padding: 8px 32px 8px 8px;
                     text-decoration: none;
@@ -557,12 +591,12 @@ class GraphVisualization {
                     align-items: center;
                 }
 
-                .dropdown .dropdown-item.selected {
+                .menu-bar .dropdown .dropdown-item.selected {
                     background: url("data:image/svg+xml;utf8,<svg height='24' viewBox='0 0 24 24' width='24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M2 6L5 9L10 3' stroke='rgba(73, 80, 87, 1)' stroke-width='2' stroke-linecap='square'/></svg>") no-repeat;
-                    background-position: left 15px top 8px;
+                    background-position: left 15px top 100%;
                 }
 
-                .dropdown-item:hover {
+                .menu-bar .dropdown .dropdown-item:hover {
                     background-color: #f8f9fa;
                 }
 
@@ -580,6 +614,26 @@ class GraphVisualization {
 
                 .item-text {
                     flex: 1;
+                }
+                
+                #graph-tools {
+                    position: absolute;
+                    bottom: 16px;
+                    right: 16px;
+                }
+        
+                #graph-tools button {
+                    display: block;
+                    width: 40px;
+                    height: 40px;
+                    background-color: transparent;
+                    border: none;
+                    border-radius: 20px;
+                    cursor: pointer;
+                }
+        
+                #graph-tools button:hover {
+                    background-color: rgba(26, 115, 232, .08);
                 }
             </style>
             <div class="menu-bar">
@@ -628,12 +682,14 @@ class GraphVisualization {
                     </label>
                     <span class="toggle-label">Show labels</span>
                 </div>
-            </div>`
+            </div>`;
 
         this.menu.elements.layoutButtons = this.menuMount.querySelectorAll('.dropdown-item');
         this.menu.elements.layoutDropdownToggle = this.menuMount.querySelector('.dropdown-toggle');
         this.menu.elements.layoutDropdownContent = this.menuMount.querySelector('.dropdown-content');
         this.menu.elements.layoutDropdownContent.addEventListener('click', e => {
+            e.preventDefault();
+            
             const title = this.menuMount.querySelector('.dropdown-toggle');
             const layoutButton = e.target.closest('.dropdown-item');
             if (!layoutButton) return;
@@ -691,6 +747,8 @@ class GraphVisualization {
                 console.error('Error updating graph layout:', error);
             }
         });
+
+        this.menu.elements.elementCount = this.menuMount.querySelector('.element-count');
 
         this.menu.elements.viewSchema = this.menuMount.querySelector('#view-schema');
         this.menu.elements.viewSchema.addEventListener('change', () => {
@@ -1028,7 +1086,7 @@ class GraphVisualization {
                         ctx.save();
                         ctx.translate(node.x, node.y);
                         const fontSize = 2;
-                        ctx.font = `${fontSize}px Sans-Serif`;
+                        ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
 
                         // Draw the label's background
                         const padding = 1;
@@ -1061,13 +1119,18 @@ class GraphVisualization {
                         }
 
                         // Draw the label text
+                        let textVerticalOffset = 0;
+                        if (navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') === -1) {
+                            textVerticalOffset = -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25;
+                        }
+
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
                         ctx.fillStyle = '#fff';
                         ctx.fillText(
                             node.label,
                             rectX + rectWidth * 0.5,
-                            -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25);
+                            textVerticalOffset);
 
                         ctx.restore();
                     });
@@ -1251,7 +1314,7 @@ class GraphVisualization {
                         const defaultTextStyle = 'normal'; // Default text style
                         const highlightedTextStyle = 'bold'; // Style when focused or selected
 
-                        ctx.font = `${isFocused || isSelected ? highlightedTextStyle : defaultTextStyle} ${fontSize}px Sans-Serif`;
+                        ctx.font = `${isFocused || isSelected ? highlightedTextStyle : defaultTextStyle} ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
 
                         const textWidth = () => (ctx.measureText(label).width + ctx.measureText(labelTail).width) * 2;
                         while (textWidth() > maxTextLength) {
@@ -1283,7 +1346,12 @@ class GraphVisualization {
 
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        const textVerticalOffset = -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25;
+                        let textVerticalOffset = 0;
+                        if (navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') === -1) {
+                            textVerticalOffset = -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25;
+                        } else {
+                            textVerticalOffset = ctx.measureText("H").actualBoundingBoxDescent * 0.5;
+                        }
                         ctx.fillStyle = isSelected
                         ? selectedTextColor
                         : isFocused
@@ -1376,5 +1444,3 @@ class GraphVisualization {
         this.graph.graphData(graphData);
     }
 }
-
-window[namespace].GraphVisualization = GraphVisualization;

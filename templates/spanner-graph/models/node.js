@@ -73,5 +73,3 @@ class Node extends GraphObject {
         this.color = color;
     }
 }
-
-window[namespace].Node = Node;
