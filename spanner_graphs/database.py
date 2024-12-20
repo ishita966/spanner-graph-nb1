@@ -35,13 +35,6 @@ class SpannerDatabase:
         self.instance = self.client.instance(instance_id)
         self.database = self.instance.database(database_id)
 
-        # In order to ensure that the database connection was properly
-        # created and that customers won't be confused by connectivity
-        # errors happening mysteriously, let's firstly run a dummy
-        # query on the database.
-        sql = 'SELECT table_name FROM information_schema.tables WHERE table_schema = ""'
-        _ = self.execute_query(sql, None, is_test_query=True)
-
     def __repr__(self) -> str:
         return (f"<SpannerDatabase["
                 f"project:{self.client.project_name},"
@@ -174,7 +167,7 @@ class MockSpannerDatabase:
     def execute_query(
         self,
         _: str,
-        limit: int = None
+        limit: int = 5
     ) -> Tuple[Dict[str, List[Any]], List[StructType.Field], List, str]:
         """Mock execution of query"""
 
@@ -197,3 +190,23 @@ class MockSpannerDatabase:
                 data[field.name].append(value)
 
         return data, fields, rows, self.schema_json
+
+
+database_instances: dict[str, SpannerDatabase | MockSpannerDatabase] = {
+    # "project_instance_database": SpannerDatabase
+}
+
+
+def get_database_instance(project: str, instance: str, database: str, mock = False):
+    if mock:
+        return MockSpannerDatabase()
+
+    key = f"{project}_{instance}_{database}"
+
+    db = database_instances.get(key, None)
+    if not db:
+        # Now create and insert it.
+        db = SpannerDatabase(project, instance, database)
+        database_instances[key] = db
+
+    return db

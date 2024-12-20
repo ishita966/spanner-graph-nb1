@@ -112,11 +112,17 @@ class GraphStore {
 
     /**
      * The data store that a GraphVisualization implementation utilizes.
-     * @param GraphConfig
+     * @param {GraphConfig|null} config
      */
     constructor(config) {
         if (!(config instanceof GraphConfig)) {
-            throw Error('Config must be an instance of GraphConfig', config);
+            config = new GraphConfig({
+                nodesData: [],
+                edgesData: [],
+                colorScheme: GraphConfig.ColorScheme.LABEL,
+                rowsData: [],
+                schemaData: {}
+            });
         }
 
         this.config = config;
@@ -378,5 +384,3 @@ class GraphStore {
         return this.config.edgeDesign.default;
     }
 }
-
-window[namespace].GraphStore = GraphStore;

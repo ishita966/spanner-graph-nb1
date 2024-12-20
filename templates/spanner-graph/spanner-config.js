@@ -300,5 +300,3 @@ class GraphConfig {
         return edges;
     }
 }
-
-window[namespace].GraphConfig = GraphConfig;

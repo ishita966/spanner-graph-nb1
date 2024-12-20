@@ -16,22 +16,26 @@
 
 import argparse
 import base64
+import random
+import uuid
 from enum import Enum, auto
 import json
 import os
 import sys
+from threading import Thread
+
+from IPython.core.display import HTML, JSON
 from IPython.core.magic import Magics, magics_class, cell_magic
-from IPython.display import display, clear_output, IFrame
+from IPython.display import display, clear_output
 from networkx import DiGraph
 import ipywidgets as widgets
 from ipywidgets import interact
 from jinja2 import Template
 
-from spanner_graphs.conversion import (columns_to_native_numpy,
-                                       prepare_data_for_graphing, SizeMode)
+from spanner_graphs.database import get_database_instance
+from spanner_graphs.graph_server import GraphServer, execute_query
 
-from spanner_graphs.database import SpannerDatabase, MockSpannerDatabase
-
+singleton_server_thread: Thread = None
 
 def _load_file(path: list[str]) -> str:
         file_path = os.path.sep.join(path)
@@ -57,10 +61,7 @@ def _load_image(path: list[str]) -> str:
         with open(file_path, 'rb') as file:
             return base64.b64decode(file.read()).decode('utf-8')
 
-def _generate_html(graph: DiGraph, rows, schema):
-        if not isinstance(rows, list):
-            rows = []
-
+def _generate_html(query, project: str, instance: str, database: str, mock: bool):
         # Get the directory of the current file (magics.py)
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -82,20 +83,14 @@ def _generate_html(graph: DiGraph, rows, schema):
         store_content = _load_file([search_dir, 'templates', 'spanner-graph', 'spanner-store.js'])
         graph_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-forcegraph.js'])
         sidebar_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-sidebar.js'])
+        server_content = _load_file([search_dir, 'templates', 'spanner-graph', 'graph-server.js'])
+        app_content = _load_file([search_dir, 'templates', 'spanner-graph', 'app.js'])
 
         # Retrieve image content
         graph_background_image = _load_image([search_dir, "templates", "assets", "images", "graph-bg.svg"])
 
         # Create a Jinja2 template
         template = Template(template_content)
-
-        nodes = []
-        for (node_id, node) in graph.nodes(data=True):
-            nodes.append(node)
-
-        edges = []
-        for (from_id, to_id, edge) in graph.edges(data=True):
-            edges.append(edge)
 
         # Render the template with the graph data and JavaScript content
         html_content = template.render(
@@ -109,10 +104,15 @@ def _generate_html(graph: DiGraph, rows, schema):
             graph_content=graph_content,
             store_content=store_content,
             sidebar_content=sidebar_content,
-            nodes=nodes,
-            edges=edges,
-            rows=rows,
-            schema=schema
+            server_content=server_content,
+            app_content=app_content,
+            query=query,
+            project=project,
+            instance=instance,
+            database=database,
+            mock=mock,
+            url=GraphServer.url,
+            id=uuid.uuid4().hex # Prevent html/js selector collisions between cells
         )
 
         return html_content
@@ -128,6 +128,16 @@ def _parse_element_display(element_rep: str) -> dict[str, str]:
     }
     return res
 
+def is_colab() -> bool:
+    """Check if code is running in Google Colab"""
+    try:
+        import google.colab
+        return True
+    except ImportError:
+        return False
+
+def receive_query_request(project, instance, database, query, mock):
+    return JSON(execute_query(project, instance, database, query, mock))
 
 @magics_class
 class NetworkVisualizationMagics(Magics):
@@ -140,35 +150,32 @@ class NetworkVisualizationMagics(Magics):
         self.args = None
         self.cell = None
 
-    def visualize(self, limit):
+        if is_colab():
+            from google.colab import output
+            output.register_callback('spanner.Query', receive_query_request)
+        else:
+            global singleton_server_thread
+            alive = singleton_server_thread and singleton_server_thread.is_alive()
+            if not alive:
+                singleton_server_thread = GraphServer.init()
+
+    def visualize(self):
         """Helper function to create and display the visualization"""
-        query_result, fields, rows, schema_json = self.database.execute_query(self.cell, limit)
-        d, ignored_columns = columns_to_native_numpy(query_result, fields)
-
-
-        graph: DiGraph = prepare_data_for_graphing(
-            incoming=d,
-            schema_json=schema_json)
-
-        if len(ignored_columns) > 0:
-            print(f"Some returned fields are not graph "
-                  f"element JSON type, so they are not "
-                  f"visualized below: {', '.join(ignored_columns)}")
-
         # Generate the HTML content
-        html_content = _generate_html(graph, rows, schema_json)
-
-        # Encode the HTML content
-        encoded_content = base64.b64encode(html_content.encode()).decode()
-        data_uri = f"data:text/html;base64,{encoded_content}"
-
-        display(IFrame(src=data_uri, width="100%", height="700px"))
+        html_content = _generate_html(
+            query=self.cell,
+            project=self.args.project,
+            instance=self.args.instance,
+            database=self.args.database,
+            mock=self.args.mock)
+        display(HTML(html_content))
 
     @cell_magic
     def spanner_graph(self, line: str, cell: str):
         """spanner_graph function"""
         parser = argparse.ArgumentParser(
-            description="Visualize network from Spanner database")
+            description="Visualize network from Spanner database",
+            exit_on_error=False)
         parser.add_argument("--project", help="GCP project ID")
         parser.add_argument("--instance",
                             help="Spanner instance ID")
@@ -178,32 +185,31 @@ class NetworkVisualizationMagics(Magics):
                             action="store_true",
                             help="Use mock database")
 
-        args = parser.parse_args(line.split())
-        if not args.mock:
-            if not (args.project and args.instance and args.database):
-                raise ValueError(
-                    "Please provide `--project`, `--instance`, "
-                    "and `--database` values for your query.")
-
         try:
+            args = parser.parse_args(line.split())
+            if not args.mock:
+                if not (args.project and args.instance and args.database):
+                    raise ValueError(
+                        "Please provide `--project`, `--instance`, "
+                        "and `--database` values for your query.")
+
             self.args = parser.parse_args(line.split())
             self.cell = cell
-
-            if self.args.mock:
-                self.database = MockSpannerDatabase()
-            else:
-                self.database = SpannerDatabase(self.args.project,
-                                                self.args.instance,
-                                                self.args.database)
+            self.database = get_database_instance(
+                self.args.project,
+                self.args.instance,
+                self.args.database,
+                mock=self.args.mock)
 
             clear_output(wait=True)
-            self.visualize(self.limit)
-        except ValueError as e:
+            self.visualize()
+
+        except BaseException as e:
             print(f"Error: {e}")
-            print("Usage: %%spanner_graph_viz --project PROJECT_ID "
+            print("Usage: %%spanner_graph --project PROJECT_ID "
                   "--instance INSTANCE_ID --database DATABASE_ID "
                   "[--mock] ")
-            print("     SELECT ... you query here ...")
+            print("       Graph query here...")
 
 
 def load_ipython_extension(ipython):

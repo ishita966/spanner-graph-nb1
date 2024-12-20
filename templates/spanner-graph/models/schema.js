@@ -343,5 +343,3 @@ class Schema {
         return table.labelNames[0];
     }
 }
-
-window[namespace].Schema = Schema;

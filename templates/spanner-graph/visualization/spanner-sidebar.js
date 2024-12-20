@@ -275,9 +275,11 @@ class SidebarConstructor {
                     width: 360px;
                     position: absolute;
                     left: 16px;
-                    top: 96px;
-                    max-height: calc(100vh - 112px);
+                    top: 16px;
+                    max-height: 80%;
                     overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
                 }
     
                 .panel-header {
@@ -314,6 +316,21 @@ class SidebarConstructor {
                     height: 28px;
                 }
                 
+                .panel-header .panel-header-content {
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .panel-header .panel-header-content.schema-header-content {
+                    font-size: 14px;
+                    font-weight: 500;
+                }
+                
+                .panel-header .selected-object-label {
+                    font-size: 16px;
+                    font-weight: 600;
+                }
+                
                 .schema-header h2 {
                     margin: 0;
                     font-size: 16px;
@@ -327,7 +344,7 @@ class SidebarConstructor {
                     border-radius: 4px;
                     margin-right: 8px;
                     color: white;
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: bold;
                     position:relative;
                 }
@@ -339,7 +356,7 @@ class SidebarConstructor {
                 
                 .node-chip-text {
                     color: white;
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: bold;
                 }
                 
@@ -360,6 +377,7 @@ class SidebarConstructor {
     
                 .panel-content {
                     padding: 16px 16px 0;
+                    overflow: scroll;
                 }
     
                 .section {
@@ -385,6 +403,7 @@ class SidebarConstructor {
                 .arrow {
                     font-size: 12px;
                     color: #666;
+                    display: flex;
                 }
     
                 .section-content {
@@ -482,8 +501,12 @@ class SidebarConstructor {
                     padding: 4px 8px;
                     border-radius: 4px;
                     margin-right: 8px;
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: bold;
+                }
+
+                .neighbor-row-edge .edge-chip {
+                    margin-right: 0;
                 }
                 
                 .edge-chip.clickable:hover {
@@ -505,7 +528,6 @@ class SidebarConstructor {
                 
                 .neighbor-row-neighbor {
                     display: flex;
-                    flex: 1;
                     justify-content: start;
                     align-items: center;
                 }
@@ -555,7 +577,8 @@ class SidebarConstructor {
         this.elements.container = this.elements.mount.querySelector('.panel');
         this.elements.content = this.elements.mount.querySelector('.panel-content');
         this.elements.title.container = this.elements.container.querySelector('.panel-header');
-        this.elements.title.content = document.createElement('h2');
+        this.elements.title.content = document.createElement('span');
+        this.elements.title.content.className = 'panel-header-content';
         this.elements.title.button = document.createElement('button');
         this.elements.properties.container = document.createElement('div');
         this.elements.schemaChipLists.nodeList.container = document.createElement('div');
@@ -569,6 +592,8 @@ class SidebarConstructor {
         container.appendChild(content);
 
         const selectedObjectTitle = () => {
+            content.classList.remove('schema-header-content');
+
             let chip = selectedObject instanceof Node ?
                     this._nodeChipHtml(selectedObject) : this._edgeChipHtml(selectedObject, 14);
 
@@ -577,7 +602,8 @@ class SidebarConstructor {
             // Display the node ID on the default graph
             if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
                 const property = document.createElement('span');
-                property.textContent = selectedObject.properties['id'];
+                property.className = 'selected-object-label';
+                property.textContent = selectedObject.properties['id'] || selectedObject.properties['ID'];
                 content.appendChild(property);
             }
 
@@ -588,6 +614,7 @@ class SidebarConstructor {
             const nodes = this.store.getNodes();
             const edgeNames = this.store.config.schema.getEdgeNames();
             content.textContent = `${nodes.length} nodes, ${edgeNames.length} edges`;
+            content.classList.add('schema-header-content');
             container.style.borderBottom = 'none';
 
             button = this._initToggleButton([
@@ -684,6 +711,7 @@ class SidebarConstructor {
                 createPropertyRow(key, value));
 
         this.elements.properties = this._createSection('Properties', properties, true);
+        this.elements.properties.title.innerHTML = `Properties <span class="count">${properties.length}</span>`;
         this.elements.content.appendChild(this.elements.properties.container);
     }
 
@@ -719,7 +747,7 @@ class SidebarConstructor {
                 if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
                     const idSpan = document.createElement('span');
                     idSpan.className = 'neighbor-id';
-                    idSpan.textContent = neighbor.properties['id'];
+                    idSpan.textContent = neighbor.properties['id'] || neighbor.properties['ID'];
                     neighborDiv.appendChild(idSpan);
                 }
 
@@ -767,6 +795,14 @@ class SidebarConstructor {
                 const value = document.createElement('div');
                 value.className = 'edge-neighbor-node';
                 value.appendChild(this._nodeChipHtml(neighbor, true));
+
+                if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                    const neighborIdElement = document.createElement('span');
+                    neighborIdElement.className = 'neighbor-id';
+                    neighborIdElement.textContent = neighbor.properties['id'] || neighbor.properties['ID'];
+                    value.appendChild(neighborIdElement);
+                }
+
                 neighborRow.appendChild(value);
 
                 if (i === 0) {
@@ -900,5 +936,3 @@ class Sidebar {
             });
     }
 }
-
-window[namespace].Sidebar = Sidebar;

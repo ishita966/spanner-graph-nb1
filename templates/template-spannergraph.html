@@ -14,197 +14,72 @@ See the License for the specific language governing permissions and
 limitations under the License.
  -->
 
-<!DOCTYPE html>
-<html lang="en">
+<style>
+    .dots {
+        background-image: url('data:image/svg+xml;base64,{{ graph_background_image }}');
+        background-repeat: repeat;
+    }
+</style>
+<div class="mount-{{ id }}"></div>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graph Visualization</title>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
-    <script src="//unpkg.com/d3-dsv"></script>
-    <script src="//unpkg.com/d3-force"></script>
-    <script src="https://unpkg.com/force-graph"></script>
-    <script>
-        const namespace = 'spanner';
-        const importOrder = [
-            `models/schema.js`,
-            `models/graph-object.js`,
-            `models/node.js`,
-            `models/edge.js`,
-            `graph-config.js`,
-            `graph-store.js`,
-            `visualization/spanner-forcegraph.js`,
-            `visualization/spanner-sidebar.js`
-        ];
-        window[namespace] = {};
+<script>
+    (() => {
+        {{ schema_content | safe }}
+        {{ graph_object_content | safe }}
+        {{ node_content | safe }}
+        {{ edge_content | safe }}
+        {{ config_content | safe }}
+        {{ graph_content | safe }}
+        {{ store_content | safe }}
+        {{ sidebar_content | safe }}
+        {{ server_content | safe }}
+        {{ app_content | safe }}
 
-        try {
-            {{ schema_content | safe }}
-            {{ graph_object_content | safe }}
-            {{ node_content | safe }}
-            {{ edge_content | safe }}
-            {{ config_content | safe }}
-            {{ graph_content | safe }}
-            {{ store_content | safe }}
-            {{ sidebar_content | safe }}
-        } catch (error) {
-            if (error instanceof FileNotFoundError) {
-                throw FileNotFoundError(
-                    `${error.message}\n` +
-                    `Did you remember to import the file in Magics.py::_generate_html?\n` +
-                    `The correct order is:\n` +
-                    `${importOrder.join('\n')}`);
-            } else if (error instanceof ReferenceError) {
-                const className = error.message.split(' ')[0];
-                throw new ReferenceError(
-                    `Class ${className} is not defined.` +
-                    `Please ensure that files are imported in the correct order.\n` +
-                    `The correct order is:\n` +
-                    `${importOrder.join('\n')}`);
-            } else {
-                throw error;
-            }
-        }
-    </script>
-    <style>
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: 'Google Sans', Roboto, Arial, sans-serif;
-            overflow: hidden;
-        }
-
-        .container {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 2px);
-            width: calc(100vw - 12px);
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .content {
-            border-radius: inherit;
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        #graph-container {
-            background-color: #FBFDFF;
-        }
-
-        #graph-container.dots {
-            background-image: url('data:image/svg+xml;base64,{{ graph_background_image }}');
-            background-repeat: repeat;
-        }
-
-        #graph-tools {
-            position: absolute;
-            bottom: 16px;
-            right: 16px;
-        }
-
-        #graph-tools button {
-            display: block;
-            width: 40px;
-            height: 40px;
-            background-color: transparent;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-
-        #graph-tools button:hover {
-            background-color: rgba(26, 115, 232, .08);
-        }
-
-        #force-graph {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-
-        #resize-handle {
-            width: 5px;
-            height: 100%;
-            background-color: #dadce0;
-            position: absolute;
-            left: 0;
-            top: 0;
-            cursor: ew-resize;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <header id="graph-menu"></header>
-        <div class="content">
-            <div id="graph-container">
-                <!-- The graph will be rendered here -->
-                <div id="force-graph"></div>
-            </div>
-            <div id="sidebar"></div>
-        </div>
-    </div>
-
-    <script>
         let initialized = false;
-        document.addEventListener('DOMContentLoaded', () => {
+
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src='${url}']`)) {
+                    return resolve();
+                }
+
+                const script = document.createElement('script');
+                script.className = 'spannerviz-external-dependency'
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        Promise.all([
+            loadScript('https://d3js.org/d3.v5.min.js'),
+            loadScript('https://unpkg.com/d3-dsv'),
+            loadScript('https://unpkg.com/d3-force'),
+            loadScript('https://unpkg.com/force-graph')
+        ]).then(() => {
+            onInit();
+        });
+
+        const onInit = () => {
             if (initialized) {
                 return;
             }
 
             initialized = true;
 
-            const nodes = {{ nodes| tojson }};
-            const edges = {{ edges| tojson }};
-            const rows = {{ rows| tojson }} || [];
-            const schema = {{ schema| tojson }};
-            renderGraph({ nodes, edges, rows, schema });
-        });
-
-        const renderGraph = ({ nodes, edges, rows, schema }) => {
-            const fixedEdges = edges.map(edge => ({
-                ...edge,
-                to: edge.to instanceof Number ? edge.to : edge.target,
-                from: edge.from instanceof Number ? edge.from : edge.source
-            }));
-
-            const graphConfig = new window[namespace].GraphConfig({
-                nodesData: nodes,
-                edgesData: fixedEdges,
-                colorScheme: window[namespace].GraphConfig.ColorScheme.LABEL,
-                rowsData: rows,
-                schemaData: schema
-            });
-            const graphStore = new window[namespace].GraphStore(graphConfig);
-
-            const sideBar = new window[namespace].Sidebar(graphStore, document.getElementById("sidebar"));
-            const graphVisualization = new window[namespace].GraphVisualization(graphStore,
-                document.getElementById('force-graph'),
-                document.getElementById('graph-menu'));
-
-            const graphContainer = document.getElementById('graph-container');
-            graphContainer.className =
-                graphStore.viewMode === window[namespace].GraphStore.ViewModes.DEFAULT ? 'dots' : '';
-
-            graphStore.addEventListener(window[namespace].GraphStore.EventTypes.VIEW_MODE_CHANGE,
-                (viewMode, config) => {
-                    graphContainer.className = viewMode === window[namespace].GraphStore.ViewModes.DEFAULT ? 'dots' : '';
-                });
+            const app = new SpannerApp(
+                {
+                    id: `{{ id }}`,
+                    mount: document.querySelector('div.mount-{{ id }}'),
+                    url: `{{ url }}`,
+                    project: `{{ project }}`,
+                    instance: `{{ instance }}`,
+                    database: `{{ database }}`,
+                    mock: `{{ mock }}` === 'True',
+                    query: `{{ query }}`,
+                }
+            );
         };
-    </script>
-</body>
-
-</html>
+    })()
+</script>

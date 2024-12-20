@@ -32,11 +32,11 @@ with open("README.md", "r") as fh:
 
 setup(
     name="spanner-graph-notebook",
-    version="v1.0.5",
+    version="1.0.0",
     packages=find_packages(),
     install_requires=[
         "networkx", "numpy", "google-cloud-spanner", "ipython",
-        "ipywidgets", "notebook"
+        "ipywidgets", "notebook", "requests", "portpicker"
     ],
     include_package_data=True,
     description='Visually query Spanner Graph data in notebooks.',
