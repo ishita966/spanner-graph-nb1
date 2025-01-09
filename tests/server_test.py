@@ -15,10 +15,16 @@
 import unittest
 from spanner_graphs.graph_server import GraphServer
 
-class MyTestCase(unittest.TestCase):
+class TestSpannerServer(unittest.TestCase):
+    def setUp(self):
+        self.server_thread = GraphServer.init()
+
+    def tearDown(self):
+        GraphServer.stop_server()  # Stop the server after each test
+        self.server_thread.join()  # Wait for the thread to finish
+
     def test_ping(self):
-        thread = GraphServer.init()
-        self.assertTrue(thread.is_alive())
+        self.assertTrue(self.server_thread.is_alive())
 
         response = GraphServer.get_ping()
         self.assertEqual(response, {"message": "pong"})

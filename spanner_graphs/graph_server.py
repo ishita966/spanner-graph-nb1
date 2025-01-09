@@ -19,6 +19,7 @@ import threading
 import requests
 import portpicker
 from networkx.classes import DiGraph
+import atexit
 
 from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
 from spanner_graphs.database import get_database_instance
@@ -68,21 +69,36 @@ class GraphServer:
         "post_query": "/post_query",
     }
 
+    _server = None
+
     @staticmethod
     def build_route(endpoint):
         return f"{GraphServer.url}{endpoint}"
 
     @staticmethod
     def start_server():
-        with socketserver.TCPServer(("", GraphServer.port), GraphServerHandler) as httpd:
-            print(f"Spanner Graph notebook loaded")
-            httpd.serve_forever()
+        class ThreadedTCPServer(socketserver.TCPServer):
+            # Allow socket reuse to avoid "Address already in use" errors
+            allow_reuse_address = True
+            # Daemon threads automatically terminate when the main program exits
+            daemon_threads = True
+
+        with ThreadedTCPServer(("", GraphServer.port), GraphServerHandler) as httpd:
+            GraphServer._server = httpd
+            print(f"Spanner Graph Notebook loaded")
+            GraphServer._server.serve_forever()
 
     @staticmethod
     def init():
         server_thread = threading.Thread(target=GraphServer.start_server)
         server_thread.start()
         return server_thread
+
+    @staticmethod
+    def stop_server():
+        if GraphServer._server:
+            GraphServer._server.shutdown()
+            print("Spanner Graph Notebook shutting down...")
 
     @staticmethod
     def get_ping():
@@ -158,3 +174,6 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_post_ping()
         elif self.path == GraphServer.endpoints["post_query"]:
             self.handle_post_query()
+
+
+atexit.register(GraphServer.stop_server)
