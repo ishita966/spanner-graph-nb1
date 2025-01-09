@@ -85,7 +85,7 @@ class GraphServer:
 
         with ThreadedTCPServer(("", GraphServer.port), GraphServerHandler) as httpd:
             GraphServer._server = httpd
-            print(f"Spanner Graph notebook loaded")
+            print(f"Spanner Graph Notebook loaded")
             GraphServer._server.serve_forever()
 
     @staticmethod
@@ -98,7 +98,7 @@ class GraphServer:
     def stop_server():
         if GraphServer._server:
             GraphServer._server.shutdown()
-            print("Spanner Graph notebook shutting down...")
+            print("Spanner Graph Notebook shutting down...")
 
     @staticmethod
     def get_ping():
