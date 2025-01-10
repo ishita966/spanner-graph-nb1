@@ -1082,6 +1082,8 @@ class GraphVisualization {
                             return;
                         }
 
+                        const label = `${node.label} (${node.identifiers.join(', ')})`;
+
                         // Init label
                         ctx.save();
                         ctx.translate(node.x, node.y);
@@ -1090,7 +1092,7 @@ class GraphVisualization {
 
                         // Draw the label's background
                         const padding = 1;
-                        const textRect = ctx.measureText(node.label);
+                        const textRect = ctx.measureText(label);
                         const rectX = this.getNodeRelativeSize() + padding * 0.5;
                         const rectWidth = textRect.width + padding;
                         const rectHeight = fontSize + padding;
@@ -1128,7 +1130,7 @@ class GraphVisualization {
                         ctx.textBaseline = 'middle';
                         ctx.fillStyle = '#fff';
                         ctx.fillText(
-                            node.label,
+                            label,
                             rectX + rectWidth * 0.5,
                             textVerticalOffset);
 

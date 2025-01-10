@@ -37,7 +37,17 @@ class Node extends GraphObject {
      */
     neighborhood = 0;
 
-    color = '#ec0001'
+    color = '#ec0001';
+
+    /**
+     * Human-readable properties that serve to identify or distinguish the node.
+     * For example, a Node with a label of "Movie" may have a key_property_names
+     * of value ['title'], where "title" is the name of a property that serves to
+     * most-effectively distinguish the node from its peers. Using this knowledge,
+     * displaying node.properties.title to the user would be helpful to them.
+     * @type {[string]}
+     */
+    identifiers = [];
 
     /**
      * @typedef {Object} NodeData - The label shown in the sidebar or graph.
@@ -71,5 +81,16 @@ class Node extends GraphObject {
         this.instantiated = true;
         this.neighborhood = typeof neighborhood === 'number' ? neighborhood : 0;
         this.color = color;
+
+        // Parse the human-readable unique identifiers that
+        // distinguishes a node from its peers
+        if (typeof properties === 'object' && Array.isArray(key_property_names)) {
+            for (let i = 0; i < key_property_names.length; i++) {
+                const identifier = properties[key_property_names[i]];
+                if (identifier) {
+                    this.identifiers.push(identifier);
+                }
+            }
+        }
     }
 }
