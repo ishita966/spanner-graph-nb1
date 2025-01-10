@@ -1082,7 +1082,10 @@ class GraphVisualization {
                             return;
                         }
 
-                        const label = `${node.label} (${node.identifiers.join(', ')})`;
+                        let label = node.label;
+                        if (this.store.viewMode === GraphStore.ViewModes.DEFAULT && node.identifiers.length > 0) {
+                            label += ` (${node.identifiers.join(', ')})`;
+                        }
 
                         // Init label
                         ctx.save();
