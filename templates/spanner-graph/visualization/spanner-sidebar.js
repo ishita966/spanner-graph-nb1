@@ -49,13 +49,14 @@ class SidebarConstructor {
      * Helper method
      * @param {Node} node
      * @param {Boolean} clickable
+     * @param {string|null} customLabel
      * @return {HTMLSpanElement}
      */
-    _nodeChipHtml(node, clickable = false) {
+    _nodeChipHtml(node, clickable = false, customLabel= null) {
         const nodeChip = document.createElement('span');
         nodeChip.style.backgroundColor = this.store.getColorForNode(node);
         nodeChip.className = `node-chip ${clickable ? 'clickable' : ''}`;
-        nodeChip.textContent = node.label;
+        nodeChip.textContent = customLabel || node.label;
 
         if (clickable) {
             nodeChip.addEventListener('mouseenter', () => {
@@ -594,17 +595,19 @@ class SidebarConstructor {
         const selectedObjectTitle = () => {
             content.classList.remove('schema-header-content');
 
-            let chip = selectedObject instanceof Node ?
-                    this._nodeChipHtml(selectedObject) : this._edgeChipHtml(selectedObject, 14);
+            if (selectedObject instanceof Node) {
+                content.appendChild(this._nodeChipHtml(selectedObject));
 
-            content.appendChild(chip);
+                if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                    const property = document.createElement('span');
+                    property.className = 'selected-object-label';
+                    property.textContent = selectedObject.identifiers.join(', ');
+                    content.appendChild(property);
+                }
+            }
 
-            // Display the node ID on the default graph
-            if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
-                const property = document.createElement('span');
-                property.className = 'selected-object-label';
-                property.textContent = selectedObject.properties['id'] || selectedObject.properties['ID'];
-                content.appendChild(property);
+            if (selectedObject instanceof Edge) {
+                content.appendChild(this._edgeChipHtml(selectedObject));
             }
 
             button = this._initCloseButton();
@@ -747,7 +750,7 @@ class SidebarConstructor {
                 if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
                     const idSpan = document.createElement('span');
                     idSpan.className = 'neighbor-id';
-                    idSpan.textContent = neighbor.properties['id'] || neighbor.properties['ID'];
+                    idSpan.textContent = neighbor.identifiers.join(', ');
                     neighborDiv.appendChild(idSpan);
                 }
 
@@ -799,7 +802,7 @@ class SidebarConstructor {
                 if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
                     const neighborIdElement = document.createElement('span');
                     neighborIdElement.className = 'neighbor-id';
-                    neighborIdElement.textContent = neighbor.properties['id'] || neighbor.properties['ID'];
+                    neighborIdElement.textContent = neighbor.identifiers.join(', ');
                     value.appendChild(neighborIdElement);
                 }
 

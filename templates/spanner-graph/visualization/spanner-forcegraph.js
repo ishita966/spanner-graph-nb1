@@ -1078,19 +1078,25 @@ class GraphVisualization {
                             this.selectedEdgeNeighbors.includes(node) ||
                             isFocusedOrHovered ||
                             this.store.viewMode === GraphStore.ViewModes.SCHEMA;
-                        if (!showLabel) {
-                            return;
-                        }
 
                         // Init label
                         ctx.save();
                         ctx.translate(node.x, node.y);
                         const fontSize = 2;
-                        ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                        ctx.font = `${this.store.viewMode === GraphStore.ViewModes.DEFAULT ? 'bold' : ''} ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+
+                        if (!showLabel) {
+                            return;
+                        }
+
+                        let label = node.label;
+                        if (this.store.viewMode === GraphStore.ViewModes.DEFAULT && node.identifiers.length > 0) {
+                            label += ` (${node.identifiers.join(', ')})`;
+                        }
 
                         // Draw the label's background
                         const padding = 1;
-                        const textRect = ctx.measureText(node.label);
+                        const textRect = ctx.measureText(label);
                         const rectX = this.getNodeRelativeSize() + padding * 0.5;
                         const rectWidth = textRect.width + padding;
                         const rectHeight = fontSize + padding;
@@ -1124,15 +1130,49 @@ class GraphVisualization {
                             textVerticalOffset = -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25;
                         }
 
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillStyle = '#fff';
-                        ctx.fillText(
-                            node.label,
-                            rectX + rectWidth * 0.5,
-                            textVerticalOffset);
+                        if (this.store.viewMode === GraphStore.ViewModes.SCHEMA) {
+                            // "NodeType"
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillStyle = '#fff';
+                            ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                            ctx.fillText(
+                                label,
+                                rectX + rectWidth * 0.5,
+                                textVerticalOffset);
 
-                        ctx.restore();
+                            ctx.restore();
+                        } else if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                            // "NodeType <b>(identifiers)</b>"
+                            // requires two separate drawings
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillStyle = '#fff';
+
+                            // 1. First, handle the regular font part ("NodeType ")
+                            const prefixLabel = `${node.label} `;
+                            ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                            const prefixRect = ctx.measureText(prefixLabel);
+
+                            // 2. Calculate how much wider the text would be if bold
+                            ctx.font = `bold ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                            const prefixBoldRect = ctx.measureText(prefixLabel);
+
+                            // 3. Adjust starting position to account for bold/regular difference
+                            // This ensures consistent left/right margins regardless of font weight
+                            const prefixLabelX = rectX + padding * 0.5 + (prefixBoldRect.width - prefixRect.width) * 0.5;
+
+                            // 4. Draw regular text first
+                            ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                            ctx.fillText(prefixLabel, prefixLabelX, textVerticalOffset);
+
+                            // 5. Draw bold identifiers part right after
+                            const suffixLabel = `(${node.identifiers.join(', ')})`;
+                            const suffixLabelX = prefixLabelX + prefixRect.width;  // Start where previous text ended
+                            ctx.font = `bold ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                            ctx.fillText(suffixLabel, suffixLabelX, textVerticalOffset);
+                            ctx.restore();
+                        }
                     });
 
             return graph;
