@@ -34,6 +34,10 @@ class SpannerApp {
      */
     store = null;
     /**
+     * @type {SpannerMenu}
+     */
+    menu = null;
+    /**
      * @type {Sidebar}
      */
     sidebar = null;
@@ -44,6 +48,21 @@ class SpannerApp {
 
     lastQuery = '';
 
+    componentMounts = {
+        /**
+         * @type {HTMLElement}
+         */
+        menu: null,
+        /**
+         * @type {HTMLElement}
+         */
+        graph: null,
+        /**
+         * @type {HTMLElement}
+         */
+        sidebar: null
+    };
+
     constructor({id, url, project, instance, database, mock, mount, query}) {
         this.id = id;
         this.lastQuery = query;
@@ -53,6 +72,8 @@ class SpannerApp {
             throw Error("Must have a valid HTML element to mount the app");
         }
         this.mount = mount;
+
+        this.scaffold();
 
         this.server = new GraphServer(url, project, instance, database, mock);
         this.server.query(query)
@@ -91,22 +112,20 @@ class SpannerApp {
                 });
 
                 this.store = new GraphStore(graphConfig);
-                this.sidebar = new Sidebar(this.store, this.mount.querySelector(`#sidebar-${this.id}`));
+                this.menu = new SpannerMenu(this.store, this.componentMounts.menu);
+                this.sidebar = new Sidebar(this.store, this.componentMounts.sidebar);
                 this.graph = new GraphVisualization(this.store,
-                    this.mount.querySelector(`#force-graph-${this.id}`),
-                    this.mount.querySelector(`#graph-menu-${this.id}`));
+                    this.componentMounts.graph, this.componentMounts.menu);
 
                 const graphContainer = this.mount.querySelector(`#graph-container-${this.id}`);
                 graphContainer.className =
-                    this.store.viewMode === GraphStore.ViewModes.DEFAULT ? 'dots' : '';
+                    this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT ? 'dots' : '';
 
                 this.store.addEventListener(GraphStore.EventTypes.VIEW_MODE_CHANGE,
                     (viewMode, config) => {
-                        graphContainer.className = viewMode === GraphStore.ViewModes.DEFAULT ? 'dots' : '';
+                        graphContainer.className = viewMode === GraphConfig.ViewModes.DEFAULT ? 'dots' : '';
                     });
             });
-
-        this.scaffold();
     }
 
     scaffold() {
@@ -224,5 +243,8 @@ class SpannerApp {
 
         this.loaderElement = this.mount.querySelector('.loader-container');
         this.errorElement = this.mount.querySelector('.error');
+        this.componentMounts.menu = this.mount.querySelector(`#graph-menu-${this.id}`);
+        this.componentMounts.graph = this.mount.querySelector(`#force-graph-${this.id}`);
+        this.componentMounts.sidebar = this.mount.querySelector(`#sidebar-${this.id}`);
     }
 }

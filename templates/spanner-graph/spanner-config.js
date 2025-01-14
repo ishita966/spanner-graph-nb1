@@ -111,6 +111,27 @@ class GraphConfig {
         LABEL: Symbol('label')
     });
 
+    static ViewModes = Object.freeze({
+        DEFAULT: Symbol('DEFAULT'),
+        SCHEMA: Symbol('SCHEMA'),
+        TABLE: Symbol('TABLE'),
+    });
+
+    static LayoutModes = Object.freeze({
+        FORCE: Symbol('FORCE'),
+        TOP_DOWN: Symbol('TOP_DOWN'),
+        LEFT_RIGHT: Symbol('LEFT_RIGHT'),
+        RADIAL_IN: Symbol('RADIAL_IN'),
+        RADIAL_OUT: Symbol('RADIAL_OUT'),
+    })
+
+    viewMode = GraphConfig.ViewModes.DEFAULT;
+    layoutMode = GraphConfig.LayoutModes.FORCE;
+    lastLayoutMode = GraphConfig.LayoutModes.FORCE;
+
+    showLabels = false;
+    lastShowLabels = false;
+
     /**
      * Constructs a new GraphConfig instance.
      * @constructor

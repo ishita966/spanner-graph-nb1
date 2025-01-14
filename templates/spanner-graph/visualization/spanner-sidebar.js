@@ -259,7 +259,7 @@ class SidebarConstructor {
                 this.neighbors();
                 this.properties();
             }
-        } else if (this.store.viewMode === GraphStore.ViewModes.SCHEMA) {
+        } else if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA) {
             this.schemaNodes();
             this.schemaEdges();
         }
@@ -598,7 +598,7 @@ class SidebarConstructor {
             if (selectedObject instanceof Node) {
                 content.appendChild(this._nodeChipHtml(selectedObject));
 
-                if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
                     const property = document.createElement('span');
                     property.className = 'selected-object-label';
                     property.textContent = selectedObject.identifiers.join(', ');
@@ -627,7 +627,7 @@ class SidebarConstructor {
 
         if (selectedObject) {
             selectedObjectTitle();
-        } else if (this.store.viewMode === GraphStore.ViewModes.SCHEMA) {
+        } else if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA) {
             // Show a high level overview of the schema
             // when no graph object is selected
             schemaTitle();
@@ -693,7 +693,7 @@ class SidebarConstructor {
 
         let labelWrapClass = '';
         let valueWrapClass = '';
-        if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+        if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
              labelWrapClass = 'property-label-wrap';
              valueWrapClass = 'property-value-wrap';
         }
@@ -747,7 +747,7 @@ class SidebarConstructor {
                 neighborDiv.appendChild(this._nodeChipHtml(neighbor, true));
 
                 // Node Neighbor ID
-                if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
                     const idSpan = document.createElement('span');
                     idSpan.className = 'neighbor-id';
                     idSpan.textContent = neighbor.identifiers.join(', ');
@@ -799,7 +799,7 @@ class SidebarConstructor {
                 value.className = 'edge-neighbor-node';
                 value.appendChild(this._nodeChipHtml(neighbor, true));
 
-                if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
                     const neighborIdElement = document.createElement('span');
                     neighborIdElement.className = 'neighbor-id';
                     neighborIdElement.textContent = neighbor.identifiers.join(', ');
@@ -882,7 +882,7 @@ class Sidebar {
         const sidebar = this.mount;
         sidebar.className = 'sidebar';
 
-        if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+        if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
             if (!this.selectedObject) {
                 sidebar.style.display = 'none';
             } else {

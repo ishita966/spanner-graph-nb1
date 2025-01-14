@@ -81,6 +81,7 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
         edge_content = _load_file([search_dir, 'templates', 'spanner-graph', 'models', 'edge.js'])
         config_content = _load_file([search_dir, 'templates', 'spanner-graph', 'spanner-config.js'])
         store_content = _load_file([search_dir, 'templates', 'spanner-graph', 'spanner-store.js'])
+        menu_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-menu.js'])
         graph_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-forcegraph.js'])
         sidebar_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-sidebar.js'])
         server_content = _load_file([search_dir, 'templates', 'spanner-graph', 'graph-server.js'])
@@ -101,6 +102,7 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
             node_content=node_content,
             edge_content=edge_content,
             config_content=config_content,
+            menu_content=menu_content,
             graph_content=graph_content,
             store_content=store_content,
             sidebar_content=sidebar_content,
