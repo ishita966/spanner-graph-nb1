@@ -281,14 +281,49 @@ class GraphVisualization {
     onViewModeChange(viewMode, config) {
         if (viewMode === GraphConfig.ViewModes.TABLE) {
             this.graph.pauseAnimation();
-        } else {
-            this.graph.resumeAnimation();
+            return;
         }
 
+        switch (viewMode) {
+            // Always use Force layout for Schema graph
+            case GraphConfig.ViewModes.SCHEMA:
+                this.onLayoutModeChange(GraphConfig.LayoutModes.FORCE);
+                break;
+            // Revert to the user's layout selection for the default graph
+            case GraphConfig.ViewModes.DEFAULT:
+                this.onLayoutModeChange(this.store.config.layoutMode);
+                break;
+        }
+
+        // Regenerate the graph
         this.requestedRecenter = true;
-        this.graph.graphData({
-            nodes: this.store.getNodes(),
+        const nextData = {
+            // Reset coordinates
+            nodes: this.store.getNodes().map(node => {
+                delete node.x;
+                delete node.y;
+                delete node.fx;
+                delete node.fy;
+                delete node.vx;
+                delete node.vy;
+                return node;
+            }),
             links: this._computeCurvature(this.store.getEdges())
+        };
+
+        // Wait for the app to finish removing `display: none` from the container.
+        // If forcegraph renders while `display: none` is still active (switching
+        // from table to graph view), the nodes will spawn in the top-left of the graph.
+        requestAnimationFrame(() => {
+            this.graph.resumeAnimation();
+            this._updateGraphSize();
+
+            // Reset the position and zoom
+            this.graph.centerAt(0, 0);
+            this.graph.graphData(nextData);
+            // Default calculation that forcegraph uses for initial zoom
+            // https://github.com/vasturiano/force-graph/blob/c128445f86a7973b1517e354dc3dc1c074d88dd7/src/force-graph.js#L495
+            this.graph.zoom(4 / Math.cbrt(nextData.nodes.length));
         });
     }
 
@@ -305,28 +340,30 @@ class GraphVisualization {
          */
         let forceGraphLayoutModeString = '';
 
+        const graphSize = Math.max(this.store.getNodes().length, 15);
+
         switch (layoutMode) {
             case GraphConfig.LayoutModes.FORCE:
                 dagDistance = 0; // Not applicable for force layout
                 break;
             case GraphConfig.LayoutModes.TOP_DOWN:
                 forceGraphLayoutModeString = 'td';
-                dagDistance = Math.log10(this.store.config.nodes.length) * 50;
+                dagDistance = Math.log10(graphSize) * 50;
                 collisionRadius = 12;
                 break;
             case GraphConfig.LayoutModes.LEFT_RIGHT:
                 forceGraphLayoutModeString = 'lr';
-                dagDistance = Math.log10(this.store.config.nodes.length) * 100;
+                dagDistance = Math.log10(graphSize) * 100;
                 collisionRadius = 12;
                 break;
             case GraphConfig.LayoutModes.RADIAL_IN:
                 forceGraphLayoutModeString = 'radialin';
-                dagDistance = Math.log10(this.store.config.nodes.length) * 100;
+                dagDistance = Math.log10(graphSize) * 100;
                 collisionRadius = 8;
                 break;
             case GraphConfig.LayoutModes.RADIAL_OUT:
                 forceGraphLayoutModeString = 'radialout';
-                dagDistance = Math.log10(this.store.config.nodes.length) * 100;
+                dagDistance = Math.log10(graphSize) * 100;
                 collisionRadius = 8;
                 break;
         }
@@ -337,6 +374,21 @@ class GraphVisualization {
         // Update d3Force collision
         this.requestedRecenter = true;
         this.graph.d3Force('collide', d3.forceCollide(collisionRadius));
+    }
+
+    _updateGraphSize() {
+        if (!document.fullscreenElement) {
+            this.mount.style.width = '100%';
+            this.mount.style.height = '616px';
+            this.graph.width(this.mount.offsetWidth);
+            this.graph.height(this.mount.offsetHeight);
+        } else {
+            const height = window.innerHeight - this.menuMount.offsetHeight;
+            this.mount.style.width = window.innerWidth + 'px';
+            this.mount.style.height = height + 'px';
+            this.graph.width(this.mount.offsetWidth);
+            this.graph.height(height);
+        }
     }
 
     _setupGraphTools(graphObject) {
@@ -402,18 +454,7 @@ class GraphVisualization {
                     return;
                 }
 
-                if (!document.fullscreenElement) {
-                    this.mount.style.width = '100%';
-                    this.mount.style.height = '616px';
-                    this.graph.width(this.mount.offsetWidth);
-                    this.graph.height(this.mount.offsetHeight);
-                } else {
-                    const height = window.innerHeight - this.menuMount.offsetHeight;
-                    this.mount.style.width = window.innerWidth + 'px';
-                    this.mount.style.height = height + 'px';
-                    this.graph.width(this.mount.offsetWidth);
-                    this.graph.height(height);
-                }
+                this._updateGraphSize();
             }));
 
             this.tools.elements.toggleFullscreen.addEventListener('click', () => {
@@ -540,11 +581,12 @@ class GraphVisualization {
         this.graph.calculateLineLengthByCluster = () => {
             this.graph
                 .d3Force('link').distance(link => {
-                    let distance = Math.log10(this.store.config.nodes.length) * 40;
+                    const graphSize = Math.max(this.store.getNodes().length, 15);
+                    let distance = Math.log10(graphSize) * 40;
 
                     // Only apply neighborhood clustering logic if using force layout
-                    if (this.store.config.nodes.length !== 0 && (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA || this.graph.dagMode() !== '')) {
-                        distance = Math.log10(this.store.config.nodes.length) * 50;
+                    if (graphSize !== 0 && (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA || this.graph.dagMode() !== '')) {
+                        distance = Math.log10(graphSize) * 50;
                     } else if (this.graph.dagMode() === '') {
                         distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.5 : distance * 0.8;
                     }
@@ -750,15 +792,18 @@ class GraphVisualization {
                             ctx.fill();
                         }
 
-                        const showLabel = this.store.config.showLabels ||
-                            node === this.store.config.selectedGraphObject ||
-                            node === this.store.config.focusedGraphObject ||
+                        const showLabel =
+                            // The user has chosen to view labels
+                            this.store.config.showLabels ||
+                            // Always show labels in Schema view
+                            this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA ||
+                            // Show labels for the node that the user has selected or focused
+                            isFocusedOrHovered ||
+                            // Always show labels for the neighbors of the selected/focused object
                             this.selectedNodeNeighbors.includes(node) ||
                             this.focusedNodeNeighbors.includes(node) ||
                             this.focusedEdgeNeighbors.includes(node) ||
-                            this.selectedEdgeNeighbors.includes(node) ||
-                            isFocusedOrHovered ||
-                            this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA;
+                            this.selectedEdgeNeighbors.includes(node);
 
                         // Init label
                         ctx.save();
@@ -1099,7 +1144,15 @@ class GraphVisualization {
         this.requestedRecenter = true;
 
         const graphData = {
-            nodes: this.store.getNodes(),
+            nodes: this.store.getNodes().map(node => {
+                delete node.x;
+                delete node.y;
+                delete node.fx;
+                delete node.fy;
+                delete node.vx;
+                delete node.vy;
+                return node;
+            }),
             links: this._computeCurvature(this.store.getEdges())
         };
 
@@ -1129,7 +1182,7 @@ class GraphVisualization {
             // These handlers should be extracted to a
             // wrapper function similar to .drawNodes()
             .onNodeHover(node => {
-                if (!this.store.config.focusedGraphObject || !(this.store.config.focusedGraphObject instanceof Edge)) { 
+                if (!this.store.config.focusedGraphObject || !(this.store.config.focusedGraphObject instanceof Edge)) {
                     this.store.setFocusedObject(node);
                 }
             })

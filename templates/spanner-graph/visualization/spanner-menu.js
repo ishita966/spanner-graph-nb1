@@ -18,7 +18,9 @@ class SpannerMenu {
         bubble: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M580-120q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T620-240q0-17-11.5-28.5T580-280q-17 0-28.5 11.5T540-240q0 17 11.5 28.5T580-200Zm80-200q-92 0-156-64t-64-156q0-92 64-156t156-64q92 0 156 64t64 156q0 92-64 156t-156 64Zm0-80q59 0 99.5-40.5T800-620q0-59-40.5-99.5T660-760q-59 0-99.5 40.5T520-620q0 59 40.5 99.5T660-480ZM280-240q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T360-400q0-33-23.5-56.5T280-480q-33 0-56.5 23.5T200-400q0 33 23.5 56.5T280-320Zm300 80Zm80-380ZM280-400Z"/></svg>`,
         table: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm240-240H200v160h240v-160Zm80 0v160h240v-160H520Zm-80-80v-160H200v160h240Zm80 0h240v-160H520v160ZM200-680h560v-80H200v80Z"/></svg>`,
         schema: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M160-40v-240h100v-80H160v-240h100v-80H160v-240h280v240H340v80h100v80h120v-80h280v240H560v-80H440v80H340v80h100v240H160Zm80-80h120v-80H240v80Zm0-320h120v-80H240v80Zm400 0h120v-80H640v80ZM240-760h120v-80H240v80Zm60-40Zm0 320Zm400 0ZM300-160Z"/></svg>`,
-    }
+        enterFullScreen: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#3C4043"><path d="M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z"/></svg>`,
+        exitFullScreen: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#3C4043"><path d="M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z"/></svg>`
+    };
 
     elements = {
         views: {
@@ -27,7 +29,7 @@ class SpannerMenu {
              */
             container: null,
             /**
-             * @type {Array<HTMLElement>}
+             * @type {Array<HTMLButtonElement>}
              */
             buttons: [],
         },
@@ -62,7 +64,11 @@ class SpannerMenu {
              * @type {HTMLInputElement}
              */
             switch: null,
-        }
+        },
+        /**
+         * @type {HTMLButtonElement}
+         */
+        fullscreen: null
     };
 
     constructor(inStore, inMount) {
@@ -97,6 +103,9 @@ class SpannerMenu {
                 }
                 .menu-bar .hidden {
                     visibility: hidden;
+                }
+                .fullscreen-container.remove {
+                    display: none;
                 }
                 .toggle-container {
                     display: flex;
@@ -273,7 +282,8 @@ class SpannerMenu {
                     background-color: rgba(26, 115, 232, .08);
                 }
                 
-                .view-toggle-group {
+                .view-toggle-group,
+                .fullscreen-container {
                     display: flex;
                     align-items: center;
                     margin-right: 16px;
@@ -282,22 +292,30 @@ class SpannerMenu {
                     overflow: hidden;
                 }
 
-                .view-toggle-group .view-toggle-button {
+                .view-toggle-group .view-toggle-button,
+                .fullscreen-container .fullscreen-button {
                     background: none;
                     border: none;
                     padding: 8px;
-                    cursor: pointer;
                     display: flex;
+                    cursor: pointer;
                     align-items: center;
                     justify-content: center;
                     border-radius: 0;
+                }
+                
+                .view-toggle-button.disabled {
+                    cursor: default;
+                    opacity: 0.5;
+                    background-color: rgba(0, 0, 0, .03);
                 }
 
                 .view-toggle-button:not(:last-child) {
                     border-right: 1px solid #DADCE0;
                 }
 
-                .view-toggle-button:hover {
+                .view-toggle-button:hover:not(.view-toggle-button.disabled, .view-toggle-button.active),
+                .fullscreen-button:hover {
                     background-color: rgba(0, 0, 0, 0.04);
                 }
 
@@ -361,6 +379,12 @@ class SpannerMenu {
                     </label>
                     <span class="toggle-label">Show labels</span>
                 </div>
+                
+                <div class="fullscreen-container remove">
+                    <button class="fullscreen-button">
+                        ${this.svg.enterFullScreen}
+                    </button>
+                </div>
             </div>`;
 
         this.elements.views.container = this.mount.querySelector('.view-toggle-group');
@@ -376,15 +400,37 @@ class SpannerMenu {
         this.elements.nodeEdgeCount = this.mount.querySelector('.element-count');
         this.elements.showLabels.container = this.mount.querySelector('#show-labels-container');
         this.elements.showLabels.switch = this.mount.querySelector('#show-labels');
+
+        this.elements.fullscreen = this.mount.querySelector('.fullscreen-button');
     }
 
     initializeEvents() {
         // View Modes
         this.elements.views.buttons = this.mount.querySelectorAll('.view-toggle-button');
         this.elements.views.buttons.forEach(button => {
-            button.addEventListener('click', () => {
-                this.store.setViewMode(GraphConfig.ViewModes[button.dataset.view]);
-            });
+            switch (button.dataset.view) {
+                case GraphConfig.ViewModes.DEFAULT.description:
+                    if (this.store.config.nodes.length && this.store.config.edges.length) {
+                        button.addEventListener('click', () => this.store.setViewMode(GraphConfig.ViewModes[button.dataset.view]));
+                    } else {
+                        button.classList.add('disabled');
+                    }
+                    break;
+                case GraphConfig.ViewModes.TABLE.description:
+                    if (this.store.config.queryResult instanceof Object) {
+                        button.addEventListener('click', () => this.store.setViewMode(GraphConfig.ViewModes[button.dataset.view]));
+                    } else {
+                        button.classList.add('disabled');
+                    }
+                    break;
+                case GraphConfig.ViewModes.SCHEMA.description:
+                    if (this.store.config.schema && this.store.config.schema.rawSchema) {
+                        button.addEventListener('click', () => this.store.setViewMode(GraphConfig.ViewModes[button.dataset.view]));
+                    } else {
+                        button.classList.add('disabled');
+                    }
+                    break;
+            }
         });
 
         this.store.addEventListener(GraphStore.EventTypes.VIEW_MODE_CHANGE, (viewMode) => {
@@ -402,14 +448,27 @@ class SpannerMenu {
                     this.elements.layout.container.classList.remove('hidden');
                     this.elements.nodeEdgeCount.classList.remove('hidden');
                     this.elements.showLabels.container.classList.remove('hidden');
+                    if (typeof google === 'undefined') {
+                        this.elements.fullscreen.parentElement.classList.add('remove');
+                    }
                     break;
                 case GraphConfig.ViewModes.TABLE:
+                    // visibility: [view modes] [fullscreen]
+                    this.elements.layout.container.classList.add('hidden');
+                    this.elements.nodeEdgeCount.classList.add('hidden');
+                    this.elements.showLabels.container.classList.add('hidden');
+                    if (typeof google === 'undefined') {
+                        this.elements.fullscreen.parentElement.classList.remove('remove');
+                    }
+                    break;
                 case GraphConfig.ViewModes.SCHEMA:
-                default:
                     // visibility: [view modes]
                     this.elements.layout.container.classList.add('hidden');
                     this.elements.nodeEdgeCount.classList.add('hidden');
                     this.elements.showLabels.container.classList.add('hidden');
+                    if (typeof google === 'undefined') {
+                        this.elements.fullscreen.parentElement.classList.add('remove');
+                    }
                     break;
             }
         });
@@ -443,5 +502,57 @@ class SpannerMenu {
         this.store.addEventListener(GraphStore.EventTypes.SHOW_LABELS, (visible) => {
            this.elements.showLabels.switch.checked = visible;
         });
+
+        // Toggle Fullscreen
+        if (typeof google === 'undefined') {
+            const debounce = (callback, timeout = 300) => {
+                let timer = 0;
+                return (...args) => {
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(() => {
+                        callback.apply(this, args);
+                    }, timeout);
+                }
+            }
+
+            const fullscreenMount = this.mount.parentElement;
+            window.addEventListener('fullscreenchange', debounce((e) => {
+                if (fullscreenMount !== e.target) {
+                    return;
+                }
+
+                if (!document.fullscreenElement) {
+                    this.elements.fullscreen.innerHTML = this.svg.enterFullScreen;
+                } else {
+                    this.elements.fullscreen.innerHTML = this.svg.exitFullScreen;
+                }
+            }));
+
+            this.elements.fullscreen.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    this.elements.fullscreen.innerHTML = this.svg.exitFullScreen;
+                    if (fullscreenMount.requestFullscreen) {
+                        fullscreenMount.requestFullscreen();
+                    } else if (fullscreenMount.mozRequestFullScreen) { // Firefox
+                        fullscreenMount.mozRequestFullScreen();
+                    } else if (fullscreenMount.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                        fullscreenMount.webkitRequestFullscreen();
+                    } else if (fullscreenMount.msRequestFullscreen) { // IE/Edge
+                        fullscreenMount.msRequestFullscreen();
+                    }
+                } else {
+                    this.elements.fullscreen.innerHTML = this.svg.enterFullScreen;
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+            });
+        }
     }
 }

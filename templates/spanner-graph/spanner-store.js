@@ -160,21 +160,15 @@ class GraphStore {
     }
 
     /**
-     * @param {ViewModes} viewMode
+     * @param {GraphConfig.ViewModes} viewMode
      */
     setViewMode(viewMode) {
+        if (viewMode === this.config.viewMode) {
+            return;
+        }
+
         this.setFocusedObject(null);
         this.setSelectedObject(null);
-
-        if (viewMode !== this.config.viewMode && viewMode === GraphConfig.ViewModes.DEFAULT) {
-            this.setLayoutMode(this.config.lastLayoutMode);
-            this.showLabels(this.config.lastShowLabels);
-        }
-
-        if (viewMode === GraphConfig.ViewModes.SCHEMA) {
-            this.setLayoutMode(GraphConfig.LayoutModes.FORCE);
-            this.showLabels(true);
-        }
 
         this.config.viewMode = viewMode;
         this.eventListeners[GraphStore.EventTypes.VIEW_MODE_CHANGE]
@@ -185,7 +179,6 @@ class GraphStore {
      * @param {Boolean} visible
      */
     showLabels(visible) {
-        this.config.lastShowLabels = this.config.showLabels;
         this.config.showLabels = visible;
         this.eventListeners[GraphStore.EventTypes.SHOW_LABELS]
             .forEach(callback => callback(visible, this.config));

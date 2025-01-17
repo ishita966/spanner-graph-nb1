@@ -84,6 +84,7 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
         menu_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-menu.js'])
         graph_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-forcegraph.js'])
         sidebar_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-sidebar.js'])
+        table_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-table.js'])
         server_content = _load_file([search_dir, 'templates', 'spanner-graph', 'graph-server.js'])
         app_content = _load_file([search_dir, 'templates', 'spanner-graph', 'app.js'])
 
@@ -106,6 +107,7 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
             graph_content=graph_content,
             store_content=store_content,
             sidebar_content=sidebar_content,
+            table_content=table_content,
             server_content=server_content,
             app_content=app_content,
             query=query,

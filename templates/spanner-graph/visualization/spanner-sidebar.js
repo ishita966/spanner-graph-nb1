@@ -277,7 +277,7 @@ class SidebarConstructor {
                     position: absolute;
                     left: 16px;
                     top: 16px;
-                    max-height: 80%;
+                    max-height: calc(100% - 2rem);
                     overflow-y: auto;
                     display: flex;
                     flex-direction: column;
@@ -912,6 +912,11 @@ class Sidebar {
                 // Clean up sidebar
                 this.mount.innerHTML = '';
                 this.mount.textContent = '';
+
+                if (viewMode === GraphConfig.ViewModes.TABLE) {
+                    return;
+                }
+
                 this.constructSidebar();
             });
 

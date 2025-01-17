@@ -45,6 +45,10 @@ class SpannerApp {
      * @type {GraphVisualization}
      */
     graph = null;
+    /**
+     * @type {SpannerTable}
+     */
+    table = null;
 
     lastQuery = '';
 
@@ -60,7 +64,11 @@ class SpannerApp {
         /**
          * @type {HTMLElement}
          */
-        sidebar: null
+        sidebar: null,
+        /**
+         * @type {HTMLElement}
+         */
+        table: null
     };
 
     constructor({id, url, project, instance, database, mock, mount, query}) {
@@ -94,7 +102,8 @@ class SpannerApp {
                     nodes,
                     edges,
                     rows,
-                    schema
+                    schema,
+                    query_result
                 } = response;
 
                 const fixedEdges = edges.map(edge => ({
@@ -108,23 +117,44 @@ class SpannerApp {
                     edgesData: fixedEdges,
                     colorScheme: GraphConfig.ColorScheme.LABEL,
                     rowsData: rows,
-                    schemaData: schema
+                    schemaData: schema,
+                    queryResult: query_result
                 });
 
                 this.store = new GraphStore(graphConfig);
+
                 this.menu = new SpannerMenu(this.store, this.componentMounts.menu);
-                this.sidebar = new Sidebar(this.store, this.componentMounts.sidebar);
-                this.graph = new GraphVisualization(this.store,
-                    this.componentMounts.graph, this.componentMounts.menu);
+
+                this.table = new SpannerTable(this.store, this.componentMounts.table, this.componentMounts.menu);
 
                 const graphContainer = this.mount.querySelector(`#graph-container-${this.id}`);
                 graphContainer.className =
                     this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT ? 'dots' : '';
 
+                if ((nodes.length && edges.length) || graphConfig.schema) {
+                    this.sidebar = new Sidebar(this.store, this.componentMounts.sidebar);
+                    this.graph = new GraphVisualization(this.store,
+                        this.componentMounts.graph, this.componentMounts.menu);
+                }
+
                 this.store.addEventListener(GraphStore.EventTypes.VIEW_MODE_CHANGE,
                     (viewMode, config) => {
                         graphContainer.className = viewMode === GraphConfig.ViewModes.DEFAULT ? 'dots' : '';
+
+                        if (viewMode === GraphConfig.ViewModes.TABLE) {
+                            this.componentMounts.graph.parentElement.classList.add('hidden');
+                            this.componentMounts.sidebar.classList.add('hidden');
+                            this.componentMounts.table.classList.remove('hidden');
+                        } else {
+                            this.componentMounts.graph.parentElement.classList.remove('hidden');
+                            this.componentMounts.sidebar.classList.remove('hidden');
+                            this.componentMounts.table.classList.add('hidden');
+                        }
                     });
+
+                if (!nodes.length || !edges.length) {
+                    this.store.setViewMode(GraphConfig.ViewModes.TABLE);
+                }
             });
     }
 
@@ -146,6 +176,8 @@ class SpannerApp {
                     padding: 0;
                     font-family: 'Google Sans', Roboto, Arial, sans-serif;
                     overflow: hidden;
+                                     
+                    background-color: #fff;
                 }
             
                 .container .content {
@@ -188,8 +220,9 @@ class SpannerApp {
                 }
                 
                 .error.hidden,
-                .loader-container.hidden {
-                    display: none;
+                .loader-container.hidden,
+                .content .hidden {
+                    display: none !important;
                 }
                 
                 .loader-container {
@@ -237,6 +270,7 @@ class SpannerApp {
                         </div>
                     </div>
                     <div id="sidebar-${this.id}"></div>
+                    <div id="table-${this.id}" class="hidden"></div>
                 </div>
             </div>
         `;
@@ -246,5 +280,6 @@ class SpannerApp {
         this.componentMounts.menu = this.mount.querySelector(`#graph-menu-${this.id}`);
         this.componentMounts.graph = this.mount.querySelector(`#force-graph-${this.id}`);
         this.componentMounts.sidebar = this.mount.querySelector(`#sidebar-${this.id}`);
+        this.componentMounts.table = this.mount.querySelector(`#table-${this.id}`);
     }
 }
