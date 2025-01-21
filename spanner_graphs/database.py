@@ -24,6 +24,7 @@ import os
 import csv
 
 from google.cloud import spanner
+from google.cloud.spanner_v1 import JsonObject
 from google.cloud.spanner_v1.types import StructType, TypeCode, Type
 
 
@@ -117,7 +118,10 @@ class SpannerDatabase:
 
             for row in rows:
                 for field, value in zip(fields, row):
-                    data[field.name].append(value)
+                    if isinstance(value, JsonObject) and value._is_array:
+                        data[field.name].append(value._array_value)
+                    else:
+                        data[field.name].append(value)
 
             return data, fields, rows, self.schema_json
 
