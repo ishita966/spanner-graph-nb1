@@ -25,6 +25,7 @@ import csv
 
 from google.cloud import spanner
 from google.cloud.spanner_v1 import JsonObject
+from google.api_core.client_options import ClientOptions
 from google.cloud.spanner_v1.types import StructType, TypeCode, Type
 
 
@@ -32,7 +33,7 @@ class SpannerDatabase:
     """The spanner class holding the database connection"""
     def __init__(self, project_id: str, instance_id: str,
                  database_id: str) -> None:
-        self.client = spanner.Client(project=project_id)
+        self.client = spanner.Client(project=project_id, client_options=ClientOptions(quota_project_id=project_id))
         self.instance = self.client.instance(instance_id)
         self.database = self.instance.database(database_id)
 
