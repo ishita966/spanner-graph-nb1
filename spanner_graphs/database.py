@@ -118,8 +118,9 @@ class SpannerDatabase:
 
             for row in rows:
                 for field, value in zip(fields, row):
-                    if isinstance(value, JsonObject) and value._is_array:
-                        data[field.name].append(value._array_value)
+                    if isinstance(value, JsonObject):
+                        # Handle JSON objects by properly deserializing them back into Python objects
+                        data[field.name].append(json.loads(value.serialize()))
                     else:
                         data[field.name].append(value)
 
