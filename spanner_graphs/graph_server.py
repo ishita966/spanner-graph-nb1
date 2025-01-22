@@ -49,7 +49,8 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
                 "nodes": nodes,
                 "edges": edges,
                 "schema": schema_json,
-                "rows": rows
+                "rows": rows,
+                "query_result": query_result
             }
         }
     except Exception as e:

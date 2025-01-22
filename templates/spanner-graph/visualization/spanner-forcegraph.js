@@ -142,44 +142,6 @@ class GraphVisualization {
         LABEL: Symbol('Force directed')
     });
 
-    /**
-     * @typedef {Object} MenuConfig
-     * @property {ClusterMethod} clusterBy - Speed of zooming in.
-     */
-    /**
-     * @typedef {Object} MenuElements
-     * @property {HTMLElement|null} cluster - The element that toggles cluster method
-     */
-
-    /**
-     *
-     * @type {
-     *  {
-     *  layout: {lastLayout: null,
-     *  currentLayout: null},
-     *  elements: {cluster: HTMLElement,
-     *  layoutDropdownToggle: HTMLElement,
-     *  layoutDropdownContent: HTMLElement,
-     *  elementCount: HTMLElement},
-     *  config: {clusterBy: symbol}
-     *  }}
-     */
-    menu = {
-        elements: {
-            cluster: null,
-            layoutDropdownToggle: null,
-            layoutDropdownContent: null,
-            elementCount: null,
-        },
-        config: {
-            clusterBy: GraphVisualization.ClusterMethod.NEIGHBORHOOD
-        },
-        layout: {
-            lastLayout: null,
-            currentLayout: null
-        }
-    };
-
     // key is the amount of nodes in the ground
     static GraphSizes = Object.freeze({
         SMALL: Symbol('Small'),
@@ -227,7 +189,6 @@ class GraphVisualization {
         this.initializeEvents(this.store);
         this.graph = ForceGraph()(this.mount);
         this._setupGraphTools(this.graph);
-        this._setupMenu(this.graph);
         this._setupDrawLabelsOnEdges(this.graph);
         this._setupLineLength(this.graph);
         this._setupDrawNodes(this.graph);
@@ -304,6 +265,9 @@ class GraphVisualization {
                 }
             });
 
+        store.addEventListener(GraphStore.EventTypes.LAYOUT_MODE_CHANGE,
+            (layoutMode, lastLayoutMode) => this.onLayoutModeChange(layoutMode, lastLayoutMode));
+
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 this.store.setSelectedObject(null); // Deselect any selected node/edge
@@ -315,22 +279,115 @@ class GraphVisualization {
      * @type ViewModeChangedCallback
      */
     onViewModeChange(viewMode, config) {
-        this.requestedRecenter = true;
-        this.graph.graphData({
-            nodes: this.store.getNodes(),
-            links: this._computeCurvature(this.store.getEdges())
-        });
+        if (viewMode === GraphConfig.ViewModes.TABLE) {
+            this.graph.pauseAnimation();
+            return;
+        }
 
-        this.menu.elements.layoutDropdownContent.classList.remove('disabled', 'hidden');
-        this.menu.elements.layoutDropdownToggle.classList.remove('disabled', 'hidden');
-        this.menu.elements.elementCount.classList.remove('hidden');
-        if (viewMode === GraphStore.ViewModes.SCHEMA) {
-            this.graph.dagMode('');
-            this.menu.elements.layoutDropdownContent.classList.add('disabled', 'hidden');
-            this.menu.elements.layoutDropdownToggle.classList.add('disabled', 'hidden');
-            this.menu.elements.elementCount.classList.add('hidden');
+        switch (viewMode) {
+            // Always use Force layout for Schema graph
+            case GraphConfig.ViewModes.SCHEMA:
+                this.onLayoutModeChange(GraphConfig.LayoutModes.FORCE);
+                break;
+            // Revert to the user's layout selection for the default graph
+            case GraphConfig.ViewModes.DEFAULT:
+                this.onLayoutModeChange(this.store.config.layoutMode);
+                break;
+        }
+
+        // Regenerate the graph
+        this.requestedRecenter = true;
+        const nextData = {
+            // Reset coordinates
+            nodes: this.store.getNodes().map(node => {
+                delete node.x;
+                delete node.y;
+                delete node.fx;
+                delete node.fy;
+                delete node.vx;
+                delete node.vy;
+                return node;
+            }),
+            links: this._computeCurvature(this.store.getEdges())
+        };
+
+        // Wait for the app to finish removing `display: none` from the container.
+        // If forcegraph renders while `display: none` is still active (switching
+        // from table to graph view), the nodes will spawn in the top-left of the graph.
+        requestAnimationFrame(() => {
+            this.graph.resumeAnimation();
+            this._updateGraphSize();
+
+            // Reset the position and zoom
+            this.graph.centerAt(0, 0);
+            this.graph.graphData(nextData);
+            // Default calculation that forcegraph uses for initial zoom
+            // https://github.com/vasturiano/force-graph/blob/c128445f86a7973b1517e354dc3dc1c074d88dd7/src/force-graph.js#L495
+            this.graph.zoom(4 / Math.cbrt(nextData.nodes.length));
+        });
+    }
+
+    /**
+     * @type LayoutModeChangedCallback
+     */
+    onLayoutModeChange(layoutMode, lastLayoutMode, config) {
+        let dagDistance;
+        let collisionRadius = 1; // Default collision radius
+
+        /**
+         * See "setDagMode": https://github.com/vasturiano/force-graph
+         * @type {string}
+         */
+        let forceGraphLayoutModeString = '';
+
+        const graphSize = Math.max(this.store.getNodes().length, 15);
+
+        switch (layoutMode) {
+            case GraphConfig.LayoutModes.FORCE:
+                dagDistance = 0; // Not applicable for force layout
+                break;
+            case GraphConfig.LayoutModes.TOP_DOWN:
+                forceGraphLayoutModeString = 'td';
+                dagDistance = Math.log10(graphSize) * 50;
+                collisionRadius = 12;
+                break;
+            case GraphConfig.LayoutModes.LEFT_RIGHT:
+                forceGraphLayoutModeString = 'lr';
+                dagDistance = Math.log10(graphSize) * 100;
+                collisionRadius = 12;
+                break;
+            case GraphConfig.LayoutModes.RADIAL_IN:
+                forceGraphLayoutModeString = 'radialin';
+                dagDistance = Math.log10(graphSize) * 100;
+                collisionRadius = 8;
+                break;
+            case GraphConfig.LayoutModes.RADIAL_OUT:
+                forceGraphLayoutModeString = 'radialout';
+                dagDistance = Math.log10(graphSize) * 100;
+                collisionRadius = 8;
+                break;
+        }
+
+        this.graph.dagMode(forceGraphLayoutModeString);
+        this.graph.dagLevelDistance(dagDistance);
+
+        // Update d3Force collision
+        this.requestedRecenter = true;
+        this.graph.d3Force('collide', d3.forceCollide(collisionRadius));
+    }
+
+    _updateGraphSize() {
+        if (!document.fullscreenElement) {
+            this.mount.style.width = '100%';
+            this.mount.style.height = '616px';
+            this.graph.width(this.mount.offsetWidth);
+            this.graph.height(this.mount.offsetHeight);
         } else {
-            this.graph.dagMode(this.menu.config.currentLayout);
+            const height = window.innerHeight - this.menuMount.offsetHeight;
+            this.mount.style.width = window.innerWidth + 'px';
+            this.mount.style.height = height + 'px';
+            this.graph.width(this.mount.offsetWidth);
+            this.graph.height(height);
         }
     }
 
@@ -397,18 +454,7 @@ class GraphVisualization {
                     return;
                 }
 
-                if (!document.fullscreenElement) {
-                    this.mount.style.width = '100%';
-                    this.mount.style.height = '616px';
-                    this.graph.width(this.mount.offsetWidth);
-                    this.graph.height(this.mount.offsetHeight);
-                } else {
-                    const height = window.innerHeight - this.menuMount.offsetHeight;
-                    this.mount.style.width = window.innerWidth + 'px';
-                    this.mount.style.height = height + 'px';
-                    this.graph.width(this.mount.offsetWidth);
-                    this.graph.height(height);
-                }
+                this._updateGraphSize();
             }));
 
             this.tools.elements.toggleFullscreen.addEventListener('click', () => {
@@ -437,330 +483,6 @@ class GraphVisualization {
                 }
             });
         }
-    }
-
-    _setupMenu() {
-        this.menuMount.innerHTML = `
-            <style>
-                header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .menu-bar {
-                    align-items: center;
-                    border-bottom: 1px solid #DADCE0;
-                    box-sizing: border-box;
-                    color: #3C4043;
-                    display: flex;
-                    padding: 16px 24px 16px 16px;
-                    width: 100%;
-                    background: #fff;
-                }
-                .menu-item {
-                    display: flex;
-                    margin-right: 16px;
-                }
-                .menu-bar .hidden {
-                    visibility: hidden;
-                }
-                .toggle-container {
-                    display: flex;
-                    align-items: center;
-                    height: 100%;
-                    margin-left: 10px;
-                }
-                .toggle-switch {
-                    position: relative;
-                    display: inline-block;
-                    width: 46px;
-                    height: 24px;
-                    flex-shrink: 0;
-                }
-                .toggle-switch input {
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                    margin: 0;
-                    padding: 0;
-                }
-                .toggle-slider {
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: #e9ecef;
-                    transition: .4s;
-                    border-radius: 24px;
-                }
-                .toggle-slider:before {
-                    position: absolute;
-                    content: "";
-                    height: 18px;
-                    width: 18px;
-                    left: 3px;
-                    bottom: 3px;
-                    background-color: white;
-                    transition: .3s;
-                    border-radius: 50%;
-                }
-                input:checked + .toggle-slider {
-                    background-color: #228be6;
-                }
-                input:checked + .toggle-slider:before {
-                    transform: translateX(22px);
-                }
-                .toggle-label {
-                    margin-left: 8px;
-                    color: #202124;
-                    line-height: 24px;
-                }
-                .graph-element-tooltip {
-                    font: 12px 'Google Sans', 'Roboto', sans-serif;
-                    position: absolute;
-                    padding: 4px 8px;
-                    box-sizing: border-box;
-                    pointer-events: none;
-                    transition: opacity 0.2s ease-in-out;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-                    border-radius: 4px;
-                }
-                
-                /* Ensure .graph-tooltip built-in from force-graph does not interfere */
-                .graph-tooltip {
-                    background: none !important;
-                    border: none !important;
-                    padding: 0 !important;
-                }
-
-                .menu-bar .dropdown {
-                    margin-right: 16px;
-                    position: relative;
-                }
-
-                .dropdown-toggle {
-                    appearance: none;
-                    background: url("data:image/svg+xml;utf8,<svg fill='rgba(73, 80, 87, 1)' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat;
-                    background-position: right 10px center;
-                    background-color: white;
-                    padding: 12px 40px 12px 16px;
-                    border: 1px solid #80868B;
-                    border-radius: 4px;
-                    color: #3C4043;
-                    cursor: pointer;
-                    font-size: 16px;
-                    text-align: left;
-                    width: 260px;
-                }
-                
-                .dropdown-toggle.disabled {
-                    background: url("data:image/svg+xml;utf8,<svg fill='rgba(73, 80, 87, .6)' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat;
-                    background-position: right 10px center;
-                    background-color: #EBEBE4;
-                    border: 1px solid #EBEBE4;
-                    cursor: default;
-                }
-
-                .arrow-down {
-                    margin-left: 5px;
-                    font-size: 10px;
-                }
-
-                .menu-bar .dropdown .dropdown-content {
-                    display: none;
-                    position: absolute;
-                    background-color: #fff;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                    z-index: 1;
-                    top: 100%;
-                    left: 0;
-                    padding: 8px 0;
-                }
-
-                .menu-bar .dropdown:hover .dropdown-content:not(.disabled) {
-                    display: block;
-                }
-
-                .menu-bar .dropdown .dropdown-item {
-                    color: #495057;
-                    padding: 8px 32px 8px 8px;
-                    text-decoration: none;
-                    display: flex;
-                    align-items: center;
-                }
-
-                .menu-bar .dropdown .dropdown-item.selected {
-                    background: url("data:image/svg+xml;utf8,<svg height='24' viewBox='0 0 24 24' width='24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M2 6L5 9L10 3' stroke='rgba(73, 80, 87, 1)' stroke-width='2' stroke-linecap='square'/></svg>") no-repeat;
-                    background-position: left 15px top 100%;
-                }
-
-                .menu-bar .dropdown .dropdown-item:hover {
-                    background-color: #f8f9fa;
-                }
-
-                .checkmark {
-                    width: 20px;
-                    margin-right: 8px;
-                }
-
-                .element-count {
-                    color: #000;
-                    display: flex;
-                    flex: 1;
-                    font-weight: 500;
-                }
-
-                .item-text {
-                    flex: 1;
-                }
-                
-                #graph-tools {
-                    position: absolute;
-                    bottom: 16px;
-                    right: 16px;
-                }
-        
-                #graph-tools button {
-                    display: block;
-                    width: 40px;
-                    height: 40px;
-                    background-color: transparent;
-                    border: none;
-                    border-radius: 20px;
-                    cursor: pointer;
-                }
-        
-                #graph-tools button:hover {
-                    background-color: rgba(26, 115, 232, .08);
-                }
-            </style>
-            <div class="menu-bar">
-                <div class="dropdown">
-                    <button class="dropdown-toggle">
-                        Force layout
-                    </button>
-                    <div class="dropdown-content">
-                        <a href="#" class="dropdown-item selected" data-layout="">
-                            <span class="checkmark"></span>
-                            <span class="item-text">Force layout</span>
-                        </a>
-                        <a href="#" class="dropdown-item" data-layout="td">
-                            <span class="checkmark"></span>
-                            <span class="item-text">Hierarchical: Top down</span>
-                        </a>
-                        <a href="#" class="dropdown-item" data-layout="lr">
-                            <span class="checkmark"></span>
-                            <span class="item-text">Hierarchical: Left-to-right</span>
-                        </a>
-                        <a href="#" class="dropdown-item" data-layout="radialin">
-                            <span class="checkmark"></span>
-                            <span class="item-text">Radial: Inward</span>
-                        </a>
-                        <a href="#" class="dropdown-item" data-layout="radialout">
-                            <span class="checkmark"></span>
-                            <span class="item-text">Radial: Outward</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="element-count">
-                    ${this.store.config.nodes.length} nodes, ${this.store.config.edges.length} edges
-                </div>
-                <div class="toggle-container">
-                    <label class="toggle-switch">
-                        <input id="view-schema" type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">View Schema</span>
-                </div>
-                <div class="toggle-container">
-                    <label class="toggle-switch">
-                        <input id="show-labels" type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">Show labels</span>
-                </div>
-            </div>`;
-
-        this.menu.elements.layoutButtons = this.menuMount.querySelectorAll('.dropdown-item');
-        this.menu.elements.layoutDropdownToggle = this.menuMount.querySelector('.dropdown-toggle');
-        this.menu.elements.layoutDropdownContent = this.menuMount.querySelector('.dropdown-content');
-        this.menu.elements.layoutDropdownContent.addEventListener('click', e => {
-            e.preventDefault();
-            
-            const title = this.menuMount.querySelector('.dropdown-toggle');
-            const layoutButton = e.target.closest('.dropdown-item');
-            if (!layoutButton) return;
-        
-            this.menu.elements.layoutButtons.forEach(button => {
-                button.className = button === layoutButton ? 'dropdown-item selected' : 'dropdown-item';
-            });
-            
-            if (title) {
-                title.textContent = layoutButton.textContent;
-            }
-            
-           try {
-                const newLayout = layoutButton.getAttribute('data-layout');
-                this.menu.config.lastLayout = this.graph.dagMode;
-                this.menu.config.currentLayout = newLayout;
-
-                let dagDistance;
-                let collisionRadius = 1; // Default collision radius
-
-                switch (newLayout) {
-                    case 'td': // Hierarchical: Top down
-                        dagDistance = Math.log10(this.store.config.nodes.length) * 50;
-                        collisionRadius = 12;
-                        this.menu.config.clusterBy = GraphVisualization.ClusterMethod.LABEL;
-                        break;
-                    case 'lr': // Hierarchical: Left-to-right
-                        dagDistance = Math.log10(this.store.config.nodes.length) * 100;
-                        collisionRadius = 12;
-                        break;
-                    case 'radialin': // Radial: Inward
-                        dagDistance = Math.log10(this.store.config.nodes.length) * 100;
-                        collisionRadius = 8;
-                        break;
-                    case 'radialout': // Radial: Outward
-                        dagDistance = Math.log10(this.store.config.nodes.length) * 100;
-                        collisionRadius = 8;
-                        break;
-                    default: // Force layout (default)
-                        dagDistance = 0; // Not applicable for force layout
-                        break;
-                }
-
-                this.graph.dagMode(newLayout);
-
-                // Set dagLevelDistance after setting dagMode
-                if (newLayout !== '') {
-                    this.graph.dagLevelDistance(dagDistance);
-                }
-
-                // Update d3Force collision
-                this.requestedRecenter = true;
-                this.graph.d3Force('collide', d3.forceCollide(collisionRadius));``
-            } catch (error) {
-                console.error('Error updating graph layout:', error);
-            }
-        });
-
-        this.menu.elements.elementCount = this.menuMount.querySelector('.element-count');
-
-        this.menu.elements.viewSchema = this.menuMount.querySelector('#view-schema');
-        this.menu.elements.viewSchema.addEventListener('change', () => {
-            const viewMode = this.menu.elements.viewSchema.checked ?
-                GraphStore.ViewModes.SCHEMA : GraphStore.ViewModes.DEFAULT;
-            this.store.setViewMode(viewMode);
-        });
-
-        this.menu.elements.showLabels = this.menuMount.querySelector('#show-labels');
-        this.menu.elements.showLabels.addEventListener('change', () => {
-            this.menu.config.showLabels = this.menu.elements.showLabels.checked;
-        });
     }
 
     /**
@@ -859,11 +581,12 @@ class GraphVisualization {
         this.graph.calculateLineLengthByCluster = () => {
             this.graph
                 .d3Force('link').distance(link => {
-                    let distance = Math.log10(this.store.config.nodes.length) * 40;
+                    const graphSize = Math.max(this.store.getNodes().length, 15);
+                    let distance = Math.log10(graphSize) * 40;
 
                     // Only apply neighborhood clustering logic if using force layout
-                    if (this.store.config.nodes.length !== 0 && (this.store.viewMode === GraphStore.ViewModes.SCHEMA || this.graph.dagMode() !== '')) {
-                        distance = Math.log10(this.store.config.nodes.length) * 50;
+                    if (graphSize !== 0 && (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA || this.graph.dagMode() !== '')) {
+                        distance = Math.log10(graphSize) * 50;
                     } else if (this.graph.dagMode() === '') {
                         distance = link.source.neighborhood === link.target.neighborhood ? distance * 0.5 : distance * 0.8;
                     }
@@ -1069,28 +792,31 @@ class GraphVisualization {
                             ctx.fill();
                         }
 
-                        const showLabel = this.menu.config.showLabels ||
-                            node === this.store.config.selectedGraphObject ||
-                            node === this.store.config.focusedGraphObject ||
+                        const showLabel =
+                            // The user has chosen to view labels
+                            this.store.config.showLabels ||
+                            // Always show labels in Schema view
+                            this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA ||
+                            // Show labels for the node that the user has selected or focused
+                            isFocusedOrHovered ||
+                            // Always show labels for the neighbors of the selected/focused object
                             this.selectedNodeNeighbors.includes(node) ||
                             this.focusedNodeNeighbors.includes(node) ||
                             this.focusedEdgeNeighbors.includes(node) ||
-                            this.selectedEdgeNeighbors.includes(node) ||
-                            isFocusedOrHovered ||
-                            this.store.viewMode === GraphStore.ViewModes.SCHEMA;
+                            this.selectedEdgeNeighbors.includes(node);
 
                         // Init label
                         ctx.save();
                         ctx.translate(node.x, node.y);
                         const fontSize = 2;
-                        ctx.font = `${this.store.viewMode === GraphStore.ViewModes.DEFAULT ? 'bold' : ''} ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
+                        ctx.font = `${this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT ? 'bold' : ''} ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
 
                         if (!showLabel) {
                             return;
                         }
 
                         let label = node.label;
-                        if (this.store.viewMode === GraphStore.ViewModes.DEFAULT && node.identifiers.length > 0) {
+                        if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT && node.identifiers.length > 0) {
                             label += ` (${node.identifiers.join(', ')})`;
                         }
 
@@ -1130,7 +856,7 @@ class GraphVisualization {
                             textVerticalOffset = -Math.abs(textRect.actualBoundingBoxAscent - textRect.actualBoundingBoxDescent) * 0.25;
                         }
 
-                        if (this.store.viewMode === GraphStore.ViewModes.SCHEMA) {
+                        if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA) {
                             // "NodeType"
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
@@ -1142,7 +868,7 @@ class GraphVisualization {
                                 textVerticalOffset);
 
                             ctx.restore();
-                        } else if (this.store.viewMode === GraphStore.ViewModes.DEFAULT) {
+                        } else if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
                             // "NodeType <b>(identifiers)</b>"
                             // requires two separate drawings
                             ctx.textAlign = 'left';
@@ -1260,7 +986,7 @@ class GraphVisualization {
                             }
 
                             // 5. Always show the label if "Show Labels" is selected
-                            if (this.menu.config.showLabels) {
+                            if (this.store.config.showLabels) {
                                 return true;
                             }
 
@@ -1418,7 +1144,15 @@ class GraphVisualization {
         this.requestedRecenter = true;
 
         const graphData = {
-            nodes: this.store.getNodes(),
+            nodes: this.store.getNodes().map(node => {
+                delete node.x;
+                delete node.y;
+                delete node.fx;
+                delete node.fy;
+                delete node.vx;
+                delete node.vy;
+                return node;
+            }),
             links: this._computeCurvature(this.store.getEdges())
         };
 
@@ -1448,7 +1182,7 @@ class GraphVisualization {
             // These handlers should be extracted to a
             // wrapper function similar to .drawNodes()
             .onNodeHover(node => {
-                if (!this.store.config.focusedGraphObject || !(this.store.config.focusedGraphObject instanceof Edge)) { 
+                if (!this.store.config.focusedGraphObject || !(this.store.config.focusedGraphObject instanceof Edge)) {
                     this.store.setFocusedObject(node);
                 }
             })

@@ -83,6 +83,10 @@ class Schema {
     constructor(rawSchemaObject) {
         this.rawSchema = rawSchemaObject;
 
+        if (!(rawSchemaObject instanceof Object)) {
+            return;
+        }
+
         if (!this.rawSchema.edgeTables || !Array.isArray(this.rawSchema.edgeTables)) {
             this.rawSchema.edgeTables = [];
         }
@@ -134,6 +138,10 @@ class Schema {
      * @returns {Array<string>}
      */
     getUniqueLabels(tables) {
+        if (!Array.isArray(tables)) {
+            return [];
+        }
+
         /**
          * @type {Array<string>}
          */
@@ -161,6 +169,10 @@ class Schema {
      * @returns {Array<string>}
      */
     getNodeNames() {
+        if (!this.rawSchema || !Array.isArray(this.rawSchema.nodeTables)) {
+            return [];
+        }
+
         return this.getUniqueLabels(this.rawSchema.nodeTables);
     }
 
@@ -168,6 +180,10 @@ class Schema {
      * @returns {Array<string>}
      */
     getEdgeNames() {
+        if (!this.rawSchema || !Array.isArray(this.rawSchema.edgeTables)) {
+            return [];
+        }
+
         return this.getUniqueLabels(this.rawSchema.edgeTables);
     }
 
