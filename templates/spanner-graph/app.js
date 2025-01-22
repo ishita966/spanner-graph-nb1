@@ -152,7 +152,7 @@ class SpannerApp {
                         }
                     });
 
-                if (!nodes.length || !edges.length) {
+                if (!nodes.length) {
                     this.store.setViewMode(GraphConfig.ViewModes.TABLE);
                 }
             });

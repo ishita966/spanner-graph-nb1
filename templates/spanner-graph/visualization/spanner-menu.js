@@ -410,7 +410,7 @@ class SpannerMenu {
         this.elements.views.buttons.forEach(button => {
             switch (button.dataset.view) {
                 case GraphConfig.ViewModes.DEFAULT.description:
-                    if (this.store.config.nodes.length && this.store.config.edges.length) {
+                    if (this.store.config.nodes.length) {
                         button.addEventListener('click', () => this.store.setViewMode(GraphConfig.ViewModes[button.dataset.view]));
                     } else {
                         button.classList.add('disabled');
