@@ -34,7 +34,7 @@ class GraphServer {
         }
     }
 
-    constructor(port, project, instance, database, mock) {
+    constructor(port, params) {
         let numericalPort = port;
         if (typeof numericalPort !== 'number') {
             numericalPort = Number.parseInt(numericalPort);
@@ -46,19 +46,13 @@ class GraphServer {
         }
 
         this.port = numericalPort;
-        this.project = project;
-        this.instance = instance;
-        this.database = database;
-        this.mock = mock;
+        this.params = params
     }
 
     query(queryString) {
         const request = {
             query: queryString,
-            project: this.project,
-            instance: this.instance,
-            database: this.database,
-            mock: this.mock
+            params: this.params
         };
 
         this.isFetching = true;

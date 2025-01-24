@@ -34,6 +34,7 @@ from jinja2 import Template
 
 from spanner_graphs.database import get_database_instance
 from spanner_graphs.graph_server import GraphServer, execute_query
+from spanner_graphs.graph_visualization import generate_visualization_html
 
 singleton_server_thread: Thread = None
 
@@ -111,11 +112,13 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
             server_content=server_content,
             app_content=app_content,
             query=query,
-            project=project,
-            instance=instance,
-            database=database,
-            mock=mock,
             port=GraphServer.port,
+            params=json.dumps({
+                 'project':project,
+                 'instance':instance,
+                 'database':database,
+                 'mock':mock
+            }),
             id=uuid.uuid4().hex # Prevent html/js selector collisions between cells
         )
 
@@ -166,12 +169,14 @@ class NetworkVisualizationMagics(Magics):
     def visualize(self):
         """Helper function to create and display the visualization"""
         # Generate the HTML content
-        html_content = _generate_html(
+        html_content = generate_visualization_html(
             query=self.cell,
-            project=self.args.project,
-            instance=self.args.instance,
-            database=self.args.database,
-            mock=self.args.mock)
+            params={
+                 'project':self.args.project,
+                 'instance':self.args.instance,
+                 'database':self.args.database,
+                 'mock':self.args.mock
+            })
         display(HTML(html_content))
 
     @cell_magic
@@ -200,10 +205,10 @@ class NetworkVisualizationMagics(Magics):
             self.args = parser.parse_args(line.split())
             self.cell = cell
             self.database = get_database_instance(
-                self.args.project,
-                self.args.instance,
-                self.args.database,
-                mock=self.args.mock)
+                {'project': self.args.project,
+                 'instance': self.args.instance,
+                 'database':self.args.database,
+                 'mock':self.args.mock})
 
             clear_output(wait=True)
             self.visualize()

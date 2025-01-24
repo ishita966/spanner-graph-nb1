@@ -284,6 +284,7 @@ class SpannerApp {
                     <div id="sidebar-${this.id}"></div>
                     <div id="table-${this.id}" class="hidden"></div>
                 </div>
+                <p><b>Hello</b></p>
             </div>
         `;
 

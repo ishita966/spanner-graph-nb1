@@ -25,8 +25,8 @@ from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_nati
 from spanner_graphs.database import get_database_instance
 
 
-def execute_query(project: str, instance: str, database: str, query: str, mock = False):
-    database = get_database_instance(project, instance, database, mock)
+def execute_query(query: str, params):
+    database = get_database_instance(params)
 
     try:
         query_result, fields, rows, schema_json = database.execute_query(query)
@@ -156,11 +156,8 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
     def handle_post_query(self):
         data = self.parse_post_data()
         response = execute_query(
-            project=data["project"],
-            instance=data["instance"],
-            database=data["database"],
-            query=data["query"],
-            mock=data["mock"]
+            query=data['query'],
+            params=json.loads(data['params'])
         )
         self.do_data_response(response)
 
