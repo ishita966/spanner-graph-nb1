@@ -162,6 +162,7 @@ class SpannerMenu {
                     margin-left: 8px;
                     color: #202124;
                     line-height: 24px;
+                    font-size: .9rem;
                 }
                 .graph-element-tooltip {
                     font: 12px 'Google Sans', 'Roboto', sans-serif;
@@ -196,9 +197,12 @@ class SpannerMenu {
                     border-radius: 4px;
                     color: #3C4043;
                     cursor: pointer;
-                    font-size: 16px;
                     text-align: left;
-                    width: 260px;
+                    
+                    width: 220px;
+
+                    font-family: inherit;
+                    font-size: .9rem;
                 }
                 
                 .dropdown-toggle.disabled {
@@ -260,6 +264,7 @@ class SpannerMenu {
 
                 .item-text {
                     flex: 1;
+                    font-size: .9rem;
                 }
                 
                 #graph-tools {
@@ -351,19 +356,19 @@ class SpannerMenu {
                         </a>
                         <a href="#" class="dropdown-item" data-layout="${GraphConfig.LayoutModes.TOP_DOWN.description}">
                             <span class="checkmark"></span>
-                            <span class="item-text">Hierarchical: Top down</span>
+                            <span class="item-text">Top-down</span>
                         </a>
                         <a href="#" class="dropdown-item" data-layout="${GraphConfig.LayoutModes.LEFT_RIGHT.description}">
                             <span class="checkmark"></span>
-                            <span class="item-text">Hierarchical: Left-to-right</span>
+                            <span class="item-text">Left-to-right</span>
                         </a>
                         <a href="#" class="dropdown-item" data-layout="${GraphConfig.LayoutModes.RADIAL_IN.description}">
                             <span class="checkmark"></span>
-                            <span class="item-text">Radial: Inward</span>
+                            <span class="item-text">Radial inward</span>
                         </a>
                         <a href="#" class="dropdown-item" data-layout="${GraphConfig.LayoutModes.RADIAL_OUT.description}">
                             <span class="checkmark"></span>
-                            <span class="item-text">Radial: Outward</span>
+                            <span class="item-text">Radial outward</span>
                         </a>
                     </div>
                 </div>

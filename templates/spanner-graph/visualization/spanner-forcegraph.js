@@ -391,6 +391,11 @@ class GraphVisualization {
         }
     }
 
+    _getRecenterPadding() {
+        return this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA ?
+            64 : 16;
+    }
+
     _setupGraphTools(graphObject) {
         const html = `
             <button id="graph-zoom-in" title="Zoom In" fill="#3C4043">
@@ -421,7 +426,7 @@ class GraphVisualization {
 
         this.tools.elements.recenter = this.tools.elements.container.querySelector('#graph-recenter');
         this.tools.elements.recenter.addEventListener('click', () => {
-            graphObject.zoomToFit(this.tools.config.recenterSpeed);
+            graphObject.zoomToFit(this.tools.config.recenterSpeed, this._getRecenterPadding());
         });
 
         this.tools.elements.zoomIn = this.tools.elements.container.querySelector('#graph-zoom-in');
@@ -1210,7 +1215,7 @@ class GraphVisualization {
         // fit to canvas when engine stops
         this.graph.onEngineStop(() => {
             if (this.requestedRecenter) {
-                this.graph.zoomToFit(1000, 16);
+                this.graph.zoomToFit(1000, this._getRecenterPadding());
                 this.requestedRecenter = false;
             }
         });

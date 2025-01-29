@@ -180,7 +180,7 @@ class SpannerTable {
             
                 #${this.mount.id} table.spanner-table {
                     table-layout: fixed !important;
-                    border-collapse: separate;
+                    border-collapse: collapse;
                     font-family: 'Google Sans', Roboto, Arial, sans-serif;
                     width: max-content;
                     min-width: 100%;
@@ -297,6 +297,7 @@ class SpannerTable {
                     text-overflow: ellipsis;
                     text-align: left;
                     line-height: 1.2rem;
+                    font-size: .8rem;
                 }
             
                 .expanded .cell-content {
