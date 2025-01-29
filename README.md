@@ -1,7 +1,7 @@
 # Spanner Graph Notebook: Explore Your Data Visually
 
 
-The Spanner Graph Notebook tool provides an efficient way for you to query [Spanner Graph](https://cloud.google.com/spanner/docs/graph/overview) visually in a notebook environment (e.g. [Google Colab](https://colab.google/) and  [Jupyter Notebook](https://jupyter.org/)). Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can can extract graph insights and relationship patterns, including node and edge properties and neighbor analysis. The tool also provides graph schema metadata visualization, tabular results inspection and diverse layout topologies.
+The Spanner Graph Notebook tool lets you visually query [Spanner Graph](https://cloud.google.com/spanner/docs/graph/overview) in a notebook environment (e.g. [Google Colab](https://colab.google/) and  [Jupyter Notebook](https://jupyter.org/)). Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can extract graph insights and relationship patterns, including node and edge properties and neighbor analysis. The tool also provides graph schema metadata visualization, tabular results inspection and diverse layout topologies.
 
 <img src="./assets/full_viz.png" width="800"/>
 
@@ -16,7 +16,7 @@ The Spanner Graph Notebook tool provides an efficient way for you to query [Span
   Prerequisites
 </h2>
 
-You need to create a GCP project, a Spanner instance and a Spanner database with a graph schema. You can follow our [Getting started with Spanner Graph](https://codelabs.developers.google.com/codelabs/spanner-graph-getting-started#0) codelab which walks through the setup.
+To use this tool, you'll need to create a GCP project, a Spanner instance and a Spanner database with graph. You can follow our [Getting started with Spanner Graph](https://codelabs.developers.google.com/codelabs/spanner-graph-getting-started#0) codelab which walks through the setup.
 
 
 <h2 id="magic-usage">
@@ -66,7 +66,7 @@ You can install and use this package in [Jupyter Notebook](https://jupyter.org/)
 
 ### Install dependencies
 
-Follow the commands below to create a managed Python environment (example based on [virtualenv](https://virtualenv.pypa.io/en/latest/)) and install `spanner-graph-notebook`
+Follow the commands below to create a managed Python environment (example based on [virtualenv](https://virtualenv.pypa.io/en/latest/)) and install [`spanner-graph-notebook`](https://pypi.org/project/spanner-graph-notebook/).
 
 ```shell
 # Create the virtualenv `viz`.
@@ -89,7 +89,7 @@ When in the root directory of the package, run `jupyter notebook` to launch Jupy
 jupyter notebook
 ```
 
-As Jupyter local server runs, it will open up a web portal. You can open create or copy the []`sample.ipynb`](https://github.com/cloudspannerecosystem/spanner-graph-notebook/blob/main/sample.ipynb) to step through an example.
+As Jupyter local server runs, it will open up a web portal. You can create or copy the [`sample.ipynb`](https://github.com/cloudspannerecosystem/spanner-graph-notebook/blob/main/sample.ipynb) to step through an example.
 
 <img src="./assets/sample_jupyter.png" width="600"/>
 
@@ -107,7 +107,7 @@ Following the code steps in the sample notebook, you can visually inspect a mock
 
 ### Use `TO_JSON` function to return graph elements
 
-Graph queries **must use** `TO_JSON` function in the `RETURN` statement to visualize paths, nodes and edges. We recommend visualizing **paths** for data completeness and ease of use.
+To visualize graph paths, nodes, and edges, graph queries must **must use** `SAFE_TO_JSON` or `TO_JSON` function in the RETURN statement. We recommend visualizing **paths** for data completeness and ease of use.
 
 ```sql
 👍 Good example returning a path as JSON.
@@ -115,7 +115,7 @@ Graph queries **must use** `TO_JSON` function in the `RETURN` statement to visua
 
 GRAPH FinGraph
 MATCH query_path = (person:Person {id: 5})-[owns:Owns]->(accnt:Account)
-RETURN TO_JSON(query_path) AS path_json
+RETURN SAFE_TO_JSON(query_path) AS path_json
 ```
 
 ```sql
@@ -123,7 +123,7 @@ RETURN TO_JSON(query_path) AS path_json
 
 GRAPH FinGraph
 MATCH query_path = (src:Account {id: 9})-[edge]->{1,3}(dst:Account)
-RETURN TO_JSON(query_path) as path_json
+RETURN SAFE_TO_JSON(query_path) as path_json
 ```
 
 ```sql
@@ -132,12 +132,12 @@ RETURN TO_JSON(query_path) as path_json
 GRAPH FinGraph
 MATCH path_1 = (person:Person {id: 5})-[:Owns]->(accnt:Account),
       path_2 = (src:Account {id: 9})-[:Transfers]->(dst:Account)
-RETURN TO_JSON(path_1) as path_1,
-       TO_JSON(path_2) as path_2
+RETURN SAFE_TO_JSON(path_1) as path_1,
+       SAFE_TO_JSON(path_2) as path_2
 ```
 
 ```
-👎 Anti-example returning nodes properties rather than JSON format graph elements.
+👎 Anti-example returning node properties rather than JSON format graph elements.
    Scalar results other than JSON format graph elements cannot be visualized.
 
 GRAPH FinGraph
@@ -153,9 +153,9 @@ RETURN person.id AS person,
 
 GRAPH FinGraph
 MATCH (person:Person {id: 5})-[owns:Owns]->(accnt:Account)
-RETURN TO_JSON(person) AS person_json,
-       TO_JSON(owns) AS owns_json,
-       TO_JSON(accnt) AS accnt_json,
+RETURN SAFE_TO_JSON(person) AS person_json,
+       SAFE_TO_JSON(owns) AS owns_json,
+       SAFE_TO_JSON(accnt) AS accnt_json,
 ```
 
 ## Testing changes
