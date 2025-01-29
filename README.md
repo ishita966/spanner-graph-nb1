@@ -56,7 +56,7 @@ You can also visualize a local dataset with `--mock` flag.
 
 You can directly invoke `%%spanner_graph` magic command in [Google Colab](https://colab.google/), a hosted Jupyter Notebook service that requires no setup to use. You'll be prompted to authenticate via [`pydata-google-auth`](https://github.com/pydata/pydata-google-auth) if Google Cloud Platform credentials aren't already available.
 
-<img src="./assets/colab_usage.png" width="800"/>
+<img src="./assets/colab_usage.png" width="600"/>
 
 <h2 id="jupyter-usage">
   Installation and Usage in Jupyter Notebook
