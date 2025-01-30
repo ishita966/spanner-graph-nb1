@@ -63,7 +63,6 @@ class SpannerDatabase:
         try:
             graph_name = self._extract_graph_name(graph_query)
         except ValueError as e:
-            print(f"Error extracting graph name: {str(e)}")
             return None
 
         with self.database.snapshot() as snapshot:
@@ -81,7 +80,6 @@ class SpannerDatabase:
             if schema_rows:
                 return schema_rows[0][1]
             else:
-                print(f"No schema found for graph: {graph_name}")
                 return None
 
     def execute_query(
