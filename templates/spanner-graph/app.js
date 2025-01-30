@@ -163,7 +163,7 @@ class SpannerApp {
             throw Error("Must have a valid HTML element to mount the app");
         }
 
-        this.mount.className = `${this.mount.className} container`;
+        this.mount.className = `${this.mount.className}`;
         this.mount.innerHTML = `
             <style>
                 .container {
@@ -174,10 +174,11 @@ class SpannerApp {
             
                     margin: 0;
                     padding: 0;
-                    font-family: 'Google Sans', Roboto, Arial, sans-serif;
                     overflow: hidden;
+                    width: calc(100% - .5rem);
                                      
                     background-color: #fff;
+                    font: 16px 'Google Sans', Roboto, Arial, sans-serif;
                 }
             
                 .container .content {
