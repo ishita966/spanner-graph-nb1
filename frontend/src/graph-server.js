@@ -58,7 +58,7 @@ class GraphServer {
         this.isFetching = true;
 
         if (typeof google !== 'undefined') {
-            return google.colab.kernel.invokeFunction('spanner.Query', [], request)
+            return google.colab.kernel.invokeFunction('graph_visualization.Query', [], request)
                 .then(result => result.data['application/json'])
                 .finally(() => this.isFetching = false);
         }

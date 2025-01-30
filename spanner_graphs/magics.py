@@ -33,8 +33,8 @@ from ipywidgets import interact
 from jinja2 import Template
 
 from spanner_graphs.database import get_database_instance
-from spanner_graphs.graph_server import GraphServer, execute_query
-from spanner_graphs.graph_visualization import generate_visualization_html
+from spanner_graphs.graph_server import GraphServer
+from spanner_graphs.graph_visualization import execute_query, generate_visualization_html
 
 singleton_server_thread: Thread = None
 
@@ -143,8 +143,8 @@ def is_colab() -> bool:
     except ImportError:
         return False
 
-def receive_query_request(project, instance, database, query, mock):
-    return JSON(execute_query(project, instance, database, query, mock))
+def receive_query_request(query, params):
+    return JSON(execute_query(query, json.loads(params)))
 
 @magics_class
 class NetworkVisualizationMagics(Magics):
@@ -159,7 +159,7 @@ class NetworkVisualizationMagics(Magics):
 
         if is_colab():
             from google.colab import output
-            output.register_callback('spanner.Query', receive_query_request)
+            output.register_callback('graph_visualization.Query', receive_query_request)
         else:
             global singleton_server_thread
             alive = singleton_server_thread and singleton_server_thread.is_alive()
@@ -171,6 +171,7 @@ class NetworkVisualizationMagics(Magics):
         # Generate the HTML content
         html_content = generate_visualization_html(
             query=self.cell,
+            url=GraphServer.url,
             params={
                  'project':self.args.project,
                  'instance':self.args.instance,
@@ -180,7 +181,7 @@ class NetworkVisualizationMagics(Magics):
         display(HTML(html_content))
 
     @cell_magic
-    def spanner_graph(self, line: str, cell: str):
+    def spanner_graph(self, line: str, cell: str):        
         """spanner_graph function"""
         parser = argparse.ArgumentParser(
             description="Visualize network from Spanner database",
@@ -213,6 +214,8 @@ class NetworkVisualizationMagics(Magics):
             clear_output(wait=True)
             self.visualize()
 
+        except ValueError as e:
+             raise e
         except BaseException as e:
             print(f"Error: {e}")
             print("Usage: %%spanner_graph --project PROJECT_ID "

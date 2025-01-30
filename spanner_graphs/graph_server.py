@@ -24,41 +24,6 @@ import atexit
 from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
 from spanner_graphs.database import get_database_instance
 
-
-def execute_query(query: str, params):
-    database = get_database_instance(params)
-
-    try:
-        query_result, fields, rows, schema_json = database.execute_query(query)
-        d, ignored_columns = columns_to_native_numpy(query_result, fields)
-
-        graph: DiGraph = prepare_data_for_graphing(
-            incoming=d,
-            schema_json=schema_json)
-
-        nodes = []
-        for (node_id, node) in graph.nodes(data=True):
-            nodes.append(node)
-
-        edges = []
-        for (from_id, to_id, edge) in graph.edges(data=True):
-            edges.append(edge)
-
-        return {
-            "response": {
-                "nodes": nodes,
-                "edges": edges,
-                "schema": schema_json,
-                "rows": rows,
-                "query_result": query_result
-            }
-        }
-    except Exception as e:
-        return {
-            "error": getattr(e, "message", str(e))
-        }
-
-
 class GraphServer:
     port = portpicker.pick_unused_port()
     host = 'http://localhost'

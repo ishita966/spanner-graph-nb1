@@ -18,12 +18,13 @@ import base64
 import uuid
 from enum import Enum, auto
 import json
+from networkx.classes import DiGraph
 import os
 
 from jinja2 import Template
 
+from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
 from spanner_graphs.database import get_database_instance
-from spanner_graphs.graph_server import GraphServer, execute_query
 
 def _load_file(path: list[str]) -> str:
         file_path = os.path.sep.join(path)
@@ -49,7 +50,7 @@ def _load_image(path: list[str]) -> str:
         with open(file_path, 'rb') as file:
             return base64.b64decode(file.read()).decode('utf-8')
 
-def generate_visualization_html(query, params):
+def generate_visualization_html(query, url, params):
         # Get the directory of the current file (graph_visualization.py)
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -96,8 +97,41 @@ def generate_visualization_html(query, params):
             app_content=app_content,
             query=query,
             params=json.dumps(params),
-            url=GraphServer.url,
+            url=url,
             id=uuid.uuid4().hex # Prevent html/js selector collisions between cells
         )
 
         return html_content
+
+def execute_query(query: str, params):
+    database = get_database_instance(params)
+
+    try:
+        query_result, fields, rows, schema_json = database.execute_query(query)
+        d, ignored_columns = columns_to_native_numpy(query_result, fields)
+
+        graph: DiGraph = prepare_data_for_graphing(
+            incoming=d,
+            schema_json=schema_json)
+
+        nodes = []
+        for (node_id, node) in graph.nodes(data=True):
+            nodes.append(node)
+
+        edges = []
+        for (from_id, to_id, edge) in graph.edges(data=True):
+            edges.append(edge)
+
+        return {
+            "response": {
+                "nodes": nodes,
+                "edges": edges,
+                "schema": schema_json,
+                "rows": rows,
+                "query_result": query_result
+            }
+        }
+    except Exception as e:
+        return {
+            "error": getattr(e, "message", str(e))
+        }
