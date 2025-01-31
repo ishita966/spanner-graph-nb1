@@ -207,7 +207,7 @@ database_instances: dict[str, SpannerDatabase | MockSpannerDatabase] = {
 }
 
 
-def get_database_instance(params):
+def get_spanner_database_instance(params):
     if params['mock']:
         return MockSpannerDatabase()
 

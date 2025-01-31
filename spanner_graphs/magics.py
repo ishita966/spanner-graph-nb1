@@ -32,7 +32,7 @@ import ipywidgets as widgets
 from ipywidgets import interact
 from jinja2 import Template
 
-from spanner_graphs.database import get_database_instance
+from spanner_graphs.database import get_spanner_database_instance
 from spanner_graphs.graph_server import GraphServer
 from spanner_graphs.graph_visualization import execute_query, generate_visualization_html
 
@@ -205,7 +205,7 @@ class NetworkVisualizationMagics(Magics):
 
             self.args = parser.parse_args(line.split())
             self.cell = cell
-            self.database = get_database_instance(
+            self.database = get_spanner_database_instance(
                 {'project': self.args.project,
                  'instance': self.args.instance,
                  'database':self.args.database,

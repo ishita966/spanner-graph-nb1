@@ -24,7 +24,7 @@ import os
 from jinja2 import Template
 
 from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
-from spanner_graphs.database import get_database_instance
+from spanner_graphs.database import get_spanner_database_instance
 
 def _load_file(path: list[str]) -> str:
         file_path = os.path.sep.join(path)
@@ -109,8 +109,16 @@ def generate_visualization_html(query, url, params):
 
 
 def execute_query(query: str, params):
-    database = get_database_instance(params)
+    # Add a hook to allow an external BigQuery repository to use this library with their own Database implementation.
+    # Note that the import is here, rather than at the top of the file, as the `bigquery_magics` module may
+    # not exist in code paths where the 'bigquery' param is not set.
+    if 'bigquery' in params:
+         from bigquery_magics import get_bigquery_database_instance
+         database = get_bigquery_database_instance(params)
+    else:
+        database = get_spanner_database_instance(params)
 
+    # Run the query and visualize it.
     try:
         query_result, fields, rows, schema_json = database.execute_query(query)
         d, ignored_columns = columns_to_native_numpy(query_result, fields)

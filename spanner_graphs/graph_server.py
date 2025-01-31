@@ -22,7 +22,6 @@ from networkx.classes import DiGraph
 import atexit
 
 from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
-from spanner_graphs.database import get_database_instance
 from spanner_graphs.graph_visualization import execute_query
 
 class GraphServer:
