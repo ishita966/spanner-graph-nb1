@@ -115,7 +115,7 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
             instance=instance,
             database=database,
             mock=mock,
-            url=GraphServer.url,
+            port=GraphServer.port,
             id=uuid.uuid4().hex # Prevent html/js selector collisions between cells
         )
 

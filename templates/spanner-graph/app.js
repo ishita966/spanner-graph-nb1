@@ -71,7 +71,7 @@ class SpannerApp {
         table: null
     };
 
-    constructor({id, url, project, instance, database, mock, mount, query}) {
+    constructor({id, port, project, instance, database, mock, mount, query}) {
         this.id = id;
         this.lastQuery = query;
 
@@ -83,9 +83,16 @@ class SpannerApp {
 
         this.scaffold();
 
-        this.server = new GraphServer(url, project, instance, database, mock);
+        this.server = new GraphServer(port, project, instance, database, mock);
         this.server.query(query)
-            .then(({error, response}) => {
+            .then(data => {
+                if (!data) {
+                    this.tearDown();
+                    return;
+                }
+
+                const {error, response} = data;
+
                 this.loaderElement.classList.add('hidden');
 
                 if (error || !response) {
@@ -156,6 +163,10 @@ class SpannerApp {
                     this.store.setViewMode(GraphConfig.ViewModes.TABLE);
                 }
             });
+    }
+
+    tearDown() {
+        this.mount.innerHTML = '';
     }
 
     scaffold() {
