@@ -42,8 +42,8 @@ You GQL query should return graph elements to have them visually displayed. See 
 %%spanner_graph --project my-gcp-project --instance my-spanner-instance --database my-database
 
 GRAPH MyGraph
-MATCH path = (a)-[:e]->(b)
-RETURN TO_JSON(path) AS p
+MATCH p = (a)-[e]->(b)
+RETURN TO_JSON(p) AS path_json
 LIMIT 50
 
 (Note: `my-gcp-project`, `my-spanner-instance`, `my-database`, and `MyGraph` are placeholders.  Replace them with your actual values.)
