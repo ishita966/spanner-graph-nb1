@@ -25,20 +25,35 @@ class GraphServer {
     };
 
     buildRoute(endpoint) {
-        return `${this.url}${endpoint}`;
-    }
-    
-    constructor(url, project, instance, database, mock) {
-        if (url) {
-            this.url = url;
+        const hostname = window.location.hostname;
+
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            // Local Jupyter Notebook environment
+            return `http://localhost:${this.port}${endpoint}`;
+        } else {
+            // Assume Vertex AI Workbench JupyterLab environment (or other JupyterLab proxy setup)
+            return `/proxy/${this.port}${endpoint}`;
         }
+    }
+
+    constructor(port, project, instance, database, mock) {
+        if (typeof port !== 'number') {
+            try {
+                port = Number(port);
+            } catch (e) {
+                console.error('Graph Server was not given a numerical port', {port});
+                return;
+            }
+        }
+
+        this.port = port;
 
         this.project = project;
         this.instance = instance;
         this.database = database;
         this.mock = mock;
     }
-    
+
     query(queryString) {
         const request = {
             query: queryString,
