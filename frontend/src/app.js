@@ -295,3 +295,8 @@ class SpannerApp {
         this.componentMounts.table = this.mount.querySelector(`#table-${this.id}`);
     }
 }
+
+
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    module.exports = SpannerApp;
+}

@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2025 Google LLC
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,10 +14,8 @@
  */
 
 class GraphServer {
-    defaultPort = 8195
-    defaultHost = 'http://localhost'
-    url = `${this.defaultHost}:${this.defaultPort}`
     isFetching = false;
+    port = 8195;
 
     endpoints = {
         getPing: '/get_ping',
@@ -37,17 +35,17 @@ class GraphServer {
     }
 
     constructor(port, project, instance, database, mock) {
-        if (typeof port !== 'number') {
-            try {
-                port = Number(port);
-            } catch (e) {
+        let numericalPort = port;
+        if (typeof numericalPort !== 'number') {
+            numericalPort = Number.parseInt(numericalPort);
+
+            if (isNaN(numericalPort)) {
                 console.error('Graph Server was not given a numerical port', {port});
                 return;
             }
         }
 
-        this.port = port;
-
+        this.port = numericalPort;
         this.project = project;
         this.instance = instance;
         this.database = database;
@@ -102,4 +100,8 @@ class GraphServer {
                 console.error('There has been a problem with your fetch operation:', error);
             });
     }
+}
+
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    module.exports = GraphServer;
 }

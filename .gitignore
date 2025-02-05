@@ -145,3 +145,9 @@ $RECYCLE.BIN/
 # Docker
 Dockerfile
 .dockerignore
+
+# Javascript
+/frontend/node_modules
+/frontend/package-lock.json
+/frontend/tests/coverage/
+/*/**/__image_snapshots__

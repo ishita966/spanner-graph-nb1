@@ -172,3 +172,11 @@ After adding new changes, please run unit and integration tests with the command
 ```shell
 cd spanner_graphs && python -m unittest discover -s tests -p "*_test.py"
 ```
+
+For frontend testing:
+```shell
+cd frontend
+npm install
+npm run test:unit
+npm run test:visual
+```

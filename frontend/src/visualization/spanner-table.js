@@ -638,3 +638,7 @@ class SpannerTable {
         this.render();
     }
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SpannerTable;
+}

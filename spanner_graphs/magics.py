@@ -67,29 +67,29 @@ def _generate_html(query, project: str, instance: str, database: str, mock: bool
 
         # Go up directories until we find the 'templates' folder
         search_dir = current_dir
-        while 'templates' not in os.listdir(search_dir):
+        while 'frontend' not in os.listdir(search_dir):
             parent = os.path.dirname(search_dir)
             if parent == search_dir:  # We've reached the root directory after I updated
-                raise FileNotFoundError("Could not find 'templates' directory")
+                raise FileNotFoundError("Could not find 'frontend' directory")
             search_dir = parent
 
         # Retrieve the javascript content
-        template_content = _load_file([search_dir, 'templates', 'template-spannergraph.html'])
-        schema_content = _load_file([search_dir, 'templates', 'spanner-graph', 'models', 'schema.js'])
-        graph_object_content = _load_file([search_dir, 'templates', 'spanner-graph', 'models', 'graph-object.js'])
-        node_content = _load_file([search_dir, 'templates', 'spanner-graph', 'models', 'node.js'])
-        edge_content = _load_file([search_dir, 'templates', 'spanner-graph', 'models', 'edge.js'])
-        config_content = _load_file([search_dir, 'templates', 'spanner-graph', 'spanner-config.js'])
-        store_content = _load_file([search_dir, 'templates', 'spanner-graph', 'spanner-store.js'])
-        menu_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-menu.js'])
-        graph_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-forcegraph.js'])
-        sidebar_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-sidebar.js'])
-        table_content = _load_file([search_dir, 'templates', 'spanner-graph', 'visualization', 'spanner-table.js'])
-        server_content = _load_file([search_dir, 'templates', 'spanner-graph', 'graph-server.js'])
-        app_content = _load_file([search_dir, 'templates', 'spanner-graph', 'app.js'])
+        template_content = _load_file([search_dir, 'frontend', 'static', 'index.html'])
+        schema_content = _load_file([search_dir, 'frontend', 'src', 'models', 'schema.js'])
+        graph_object_content = _load_file([search_dir, 'frontend', 'src', 'models', 'graph-object.js'])
+        node_content = _load_file([search_dir, 'frontend', 'src', 'models', 'node.js'])
+        edge_content = _load_file([search_dir, 'frontend', 'src', 'models', 'edge.js'])
+        config_content = _load_file([search_dir, 'frontend', 'src', 'spanner-config.js'])
+        store_content = _load_file([search_dir, 'frontend', 'src', 'spanner-store.js'])
+        menu_content = _load_file([search_dir, 'frontend', 'src', 'visualization', 'spanner-menu.js'])
+        graph_content = _load_file([search_dir, 'frontend', 'src', 'visualization', 'spanner-forcegraph.js'])
+        sidebar_content = _load_file([search_dir, 'frontend', 'src', 'visualization', 'spanner-sidebar.js'])
+        table_content = _load_file([search_dir, 'frontend', 'src', 'visualization', 'spanner-table.js'])
+        server_content = _load_file([search_dir, 'frontend', 'src', 'graph-server.js'])
+        app_content = _load_file([search_dir, 'frontend', 'src', 'app.js'])
 
         # Retrieve image content
-        graph_background_image = _load_image([search_dir, "templates", "assets", "images", "graph-bg.svg"])
+        graph_background_image = _load_image([search_dir, "frontend", "static", "graph-bg.svg"])
 
         # Create a Jinja2 template
         template = Template(template_content)

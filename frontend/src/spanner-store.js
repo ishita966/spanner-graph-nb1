@@ -13,6 +13,12 @@
  * limitations under the License.
  */
 
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    GraphConfig = require('./spanner-config');
+    Node = require('./models/node');
+    Edge = require('./models/edge');
+}
+
 /**
  * @callback GraphConfigCallback
  * @param {GraphConfig} config - The graph configuration.
@@ -93,7 +99,7 @@ class GraphStore {
     });
 
     /**
-     * Events that are broadcasted to GraphVisualization implementations. 
+     * Events that are broadcasted to GraphVisualization implementations.
      * @type Map<GraphStore.EventTypes, GraphConfigCallback[]>.
      */
     eventListeners = {
@@ -113,7 +119,7 @@ class GraphStore {
         /**
          * @type {GraphStore.EventTypes.COLOR_SCHEME, SelectedGraphColorSchemeCallback[]>}
          */
-        [GraphConfig.ColorScheme.COLOR_SCHEME]: [],
+        [GraphStore.EventTypes.COLOR_SCHEME]: [],
         /**
          * @type {GraphStore.EventTypes.VIEW_MODE_CHANGE, ViewModeChangedCallback[]>}
          */
@@ -191,7 +197,7 @@ class GraphStore {
         this.config.lastLayoutMode = this.config.layoutMode;
         this.config.layoutMode = layoutMode;
         this.eventListeners[GraphStore.EventTypes.LAYOUT_MODE_CHANGE]
-        .forEach(callback => callback(layoutMode, this.config.lastLayoutMode, this.config));
+            .forEach(callback => callback(layoutMode, this.config.lastLayoutMode, this.config));
     }
 
     /**
@@ -263,7 +269,7 @@ class GraphStore {
         }
     }
 
-     getNeighborsOfNode(node) {
+    getNeighborsOfNode(node) {
         if (!node || !node instanceof Node) {
             return [];
         }
@@ -398,7 +404,7 @@ class GraphStore {
     }
 
     getEdgeDesign(edge) {
-        const hasSelectedObject = this.config.selectedGraphObject 
+        const hasSelectedObject = this.config.selectedGraphObject
         const edgeIsSelected = this.config.selectedGraphObject && edge === this.config.selectedGraphObject;
         if (hasSelectedObject && edgeIsSelected) {
             return this.config.edgeDesign.selected;
@@ -425,4 +431,8 @@ class GraphStore {
 
         return this.config.edgeDesign.default;
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = GraphStore;
 }
