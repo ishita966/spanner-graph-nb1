@@ -113,7 +113,7 @@ def execute_query(query: str, params):
     # Note that the import is here, rather than at the top of the file, as the `bigquery_magics` module may
     # not exist in code paths where the 'bigquery' param is not set.
     if 'bigquery' in params:
-         from bigquery_magics import get_bigquery_database_instance
+         from bigquery_magics.bigquery import get_bigquery_database_instance
          database = get_bigquery_database_instance(params)
     else:
         database = get_spanner_database_instance(params)

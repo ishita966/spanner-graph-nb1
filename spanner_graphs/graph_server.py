@@ -51,7 +51,6 @@ class GraphServer:
 
         with ThreadedTCPServer(("", GraphServer.port), GraphServerHandler) as httpd:
             GraphServer._server = httpd
-            print(f"Spanner Graph Notebook loaded")
             GraphServer._server.serve_forever()
 
     @staticmethod

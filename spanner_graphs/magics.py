@@ -176,7 +176,7 @@ class NetworkVisualizationMagics(Magics):
                  'project':self.args.project,
                  'instance':self.args.instance,
                  'database':self.args.database,
-                 'mock':self.args.mock
+                 'mock':self.args.mock,
             })
         display(HTML(html_content))
 
