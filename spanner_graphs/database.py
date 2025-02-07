@@ -219,16 +219,16 @@ database_instances: dict[str, SpannerDatabase | MockSpannerDatabase] = {
 }
 
 
-def get_spanner_database_instance(params):
-    if params['mock']:
+def get_database_instance(project: str, instance: str, database: str, mock = False):
+    if mock:
         return MockSpannerDatabase()
 
-    key = f"{params['project']}_{params['instance']}_{params['database']}"
+    key = f"{project}_{instance}_{database}"
 
     db = database_instances.get(key, None)
     if not db:
         # Now create and insert it.
-        db = SpannerDatabase(params['project'], params['instance'], params['database'])
+        db = SpannerDatabase(project, instance, database)
         database_instances[key] = db
 
     return db

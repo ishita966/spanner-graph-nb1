@@ -22,7 +22,40 @@ from networkx.classes import DiGraph
 import atexit
 
 from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
-from spanner_graphs.graph_visualization import execute_query
+from spanner_graphs.database import get_database_instance
+
+def execute_query(project: str, instance: str, database: str, query: str, mock = False):
+    database = get_database_instance(project, instance, database, mock)
+
+    try:
+        query_result, fields, rows, schema_json = database.execute_query(query)
+        d, ignored_columns = columns_to_native_numpy(query_result, fields)
+
+        graph: DiGraph = prepare_data_for_graphing(
+            incoming=d,
+            schema_json=schema_json)
+
+        nodes = []
+        for (node_id, node) in graph.nodes(data=True):
+            nodes.append(node)
+
+        edges = []
+        for (from_id, to_id, edge) in graph.edges(data=True):
+            edges.append(edge)
+
+        return {
+            "response": {
+                "nodes": nodes,
+                "edges": edges,
+                "schema": schema_json,
+                "rows": rows,
+                "query_result": query_result
+            }
+        }
+    except Exception as e:
+        return {
+            "error": getattr(e, "message", str(e))
+        }
 
 class GraphServer:
     port = portpicker.pick_unused_port()
@@ -119,9 +152,13 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
 
     def handle_post_query(self):
         data = self.parse_post_data()
+        params = json.loads(data['params'])
         response = execute_query(
             query=data['query'],
-            params=json.loads(data['params'])
+            project=params['project'],
+            instance=params['instance'],
+            database=params['database'],
+            mock=params['mock']
         )
         self.do_data_response(response)
 

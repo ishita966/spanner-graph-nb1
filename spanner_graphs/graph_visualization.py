@@ -23,9 +23,6 @@ import os
 
 from jinja2 import Template
 
-from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
-from spanner_graphs.database import get_spanner_database_instance
-
 def _load_file(path: list[str]) -> str:
         file_path = os.path.sep.join(path)
         if not os.path.exists(file_path):
@@ -106,45 +103,3 @@ def generate_visualization_html(query, port, params):
         )
 
         return html_content
-
-
-def execute_query(query: str, params):
-    # Add a hook to allow an external BigQuery repository to use this library with their own Database implementation.
-    # Note that the import is here, rather than at the top of the file, as the `bigquery_magics` module may
-    # not exist in code paths where the 'bigquery' param is not set.
-    if 'bigquery' in params:
-         from bigquery_magics.bigquery import get_bigquery_database_instance
-         database = get_bigquery_database_instance(params)
-    else:
-        database = get_spanner_database_instance(params)
-
-    # Run the query and visualize it.
-    try:
-        query_result, fields, rows, schema_json = database.execute_query(query)
-        d, ignored_columns = columns_to_native_numpy(query_result, fields)
-
-        graph: DiGraph = prepare_data_for_graphing(
-            incoming=d,
-            schema_json=schema_json)
-
-        nodes = []
-        for (node_id, node) in graph.nodes(data=True):
-            nodes.append(node)
-
-        edges = []
-        for (from_id, to_id, edge) in graph.edges(data=True):
-            edges.append(edge)
-
-        return {
-            "response": {
-                "nodes": nodes,
-                "edges": edges,
-                "schema": schema_json,
-                "rows": rows,
-                "query_result": query_result
-            }
-        }
-    except Exception as e:
-        return {
-            "error": getattr(e, "message", str(e))
-        }

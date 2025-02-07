@@ -32,9 +32,9 @@ import ipywidgets as widgets
 from ipywidgets import interact
 from jinja2 import Template
 
-from spanner_graphs.database import get_spanner_database_instance
-from spanner_graphs.graph_server import GraphServer
-from spanner_graphs.graph_visualization import execute_query, generate_visualization_html
+from spanner_graphs.database import get_database_instance
+from spanner_graphs.graph_server import GraphServer, execute_query
+from spanner_graphs.graph_visualization import generate_visualization_html
 
 singleton_server_thread: Thread = None
 
@@ -81,7 +81,12 @@ def is_colab() -> bool:
         return False
 
 def receive_query_request(query, params):
-    return JSON(execute_query(query, json.loads(params)))
+    params = json.loads(data['params'])
+    return JSON(execute_query(query, 
+                              project=params['project'],
+                              instance=params['instance'],
+                              database=params['database'],
+                              mock=params['mock']))
 
 @magics_class
 class NetworkVisualizationMagics(Magics):
@@ -142,12 +147,11 @@ class NetworkVisualizationMagics(Magics):
 
             self.args = parser.parse_args(line.split())
             self.cell = cell
-            self.database = get_spanner_database_instance(
-                {'project': self.args.project,
-                 'instance': self.args.instance,
-                 'database':self.args.database,
-                 'mock':self.args.mock})
-
+            self.database = get_database_instance(
+                self.args.project,
+                self.args.instance,
+                self.args.database,
+                mock=self.args.mock)
             clear_output(wait=True)
             self.visualize()
 
