@@ -22,6 +22,13 @@ class GraphServer {
         postQuery: '/post_query',
     };
 
+    /**
+     * Contains parameters needed to create the database object; passed to Python when running a query.
+     * @type {string}
+     */
+    params = null;
+
+
     buildRoute(endpoint) {
         const hostname = window.location.hostname;
 

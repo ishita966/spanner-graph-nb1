@@ -157,6 +157,8 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
         data = self.parse_post_data()
         params = json.loads(data['params'])
         response = execute_query(
+
+            
             project=params["project"],
             instance=params["instance"],
             database=params["database"],
