@@ -24,6 +24,7 @@ import atexit
 from spanner_graphs.conversion import prepare_data_for_graphing, columns_to_native_numpy
 from spanner_graphs.database import get_database_instance
 
+
 def execute_query(project: str, instance: str, database: str, query: str, mock = False):
     database = get_database_instance(project, instance, database, mock)
 
@@ -57,6 +58,7 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
             "error": getattr(e, "message", str(e))
         }
 
+
 class GraphServer:
     port = portpicker.pick_unused_port()
     host = 'http://localhost'
@@ -84,6 +86,7 @@ class GraphServer:
 
         with ThreadedTCPServer(("", GraphServer.port), GraphServerHandler) as httpd:
             GraphServer._server = httpd
+            print(f"Spanner Graph Notebook loaded")
             GraphServer._server.serve_forever()
 
     @staticmethod
@@ -154,11 +157,11 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
         data = self.parse_post_data()
         params = json.loads(data['params'])
         response = execute_query(
-            query=data['query'],
-            project=params['project'],
-            instance=params['instance'],
-            database=params['database'],
-            mock=params['mock']
+            project=params["project"],
+            instance=params["instance"],
+            database=params["database"],
+            query=data["query"],
+            mock=params["mock"]
         )
         self.do_data_response(response)
 

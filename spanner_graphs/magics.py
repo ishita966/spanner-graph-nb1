@@ -80,13 +80,13 @@ def is_colab() -> bool:
     except ImportError:
         return False
 
-def receive_query_request(query, params):
-    params = json.loads(data['params'])
-    return JSON(execute_query(query, 
-                              project=params['project'],
-                              instance=params['instance'],
-                              database=params['database'],
-                              mock=params['mock']))
+def receive_query_request(query: str, params: str):
+    params_dict = json.loads(params)
+    return JSON(execute_query(project=params_dict["project"],
+                              instance=params_dict["instance"],
+                              database=params_dict["database"],
+                              query=query,
+                              mock=params_dict["mock"]))
 
 @magics_class
 class NetworkVisualizationMagics(Magics):
@@ -115,15 +115,15 @@ class NetworkVisualizationMagics(Magics):
             query=self.cell,
             port=GraphServer.port,
             params={
-                 'project':self.args.project,
-                 'instance':self.args.instance,
-                 'database':self.args.database,
-                 'mock':self.args.mock,
+                 "project":self.args.project,
+                 "instance":self.args.instance,
+                 "database":self.args.database,
+                 "mock":self.args.mock,
             })
         display(HTML(html_content))
 
     @cell_magic
-    def spanner_graph(self, line: str, cell: str):        
+    def spanner_graph(self, line: str, cell: str):
         """spanner_graph function"""
         parser = argparse.ArgumentParser(
             description="Visualize network from Spanner database",
@@ -154,9 +154,6 @@ class NetworkVisualizationMagics(Magics):
                 mock=self.args.mock)
             clear_output(wait=True)
             self.visualize()
-
-        except ValueError as e:
-             raise e
         except BaseException as e:
             print(f"Error: {e}")
             print("Usage: %%spanner_graph --project PROJECT_ID "

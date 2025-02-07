@@ -108,18 +108,13 @@ class SpannerDatabase:
             self.schema_json = self._get_schema_for_graph(query)
 
         with self.database.snapshot() as snapshot:
-            log = ''
-
             params = None
             if limit and limit > 0:
                 params = dict(limit=limit)
 
             results = snapshot.execute_sql(query, params=params)
-            log += 'results:\n' + str(results) + '\n\n'
-            rows = list(results)            
+            rows = list(results)
             fields: List[StructType.Field] = results.fields
-            log += 'fields:\n' + str(fields) + '\n\n'
-            log += 'rows:\n' + str(rows) + '\n\n'
 
             data = {field.name: [] for field in fields}
 
@@ -127,20 +122,13 @@ class SpannerDatabase:
                 return data, fields, rows
 
             for row in rows:
-                log += 'row:\n' + str(row) + '\n\n'
                 for field, value in zip(fields, row):
-                    log += '  field: ' + str(field) + ', value: ' + str(value) + '\n\n'
                     if isinstance(value, JsonObject):
-                        log += '  (json path):\n' + value.serialize() + '\n\n'
                         # Handle JSON objects by properly deserializing them back into Python objects
                         data[field.name].append(json.loads(value.serialize()))
                     else:
-                        log += '  (non-json path)\n'
                         data[field.name].append(value)
 
-            #log = f'data: %s\n\nfields: %s\n\nrows: %s\n\nschema_json: %s\n' % (data, fields, rows, self.schema_json)
-            from IPython.core.getipython import get_ipython
-            get_ipython().push({'debug': log})
             return data, fields, rows, self.schema_json
 
 
