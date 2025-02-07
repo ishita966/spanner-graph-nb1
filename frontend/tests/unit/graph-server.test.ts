@@ -28,20 +28,23 @@ describe('GraphServer', () => {
         mockFetch.mockClear();
         graphServer = new GraphServer(
             8000,
-            'test-project',
-            'test-instance',
-            'test-database',
-            false
+            {'project': 'test-project',
+             'instance': 'test-instance',
+             'database': 'test-database',
+             'mock': false
+            }
         );
     });
 
     describe('constructor', () => {
         it('should initialize with the default variables', () => {
            expect(graphServer.port).toBe(8000);
-           expect(graphServer.project).toBe('test-project');
-           expect(graphServer.instance).toBe('test-instance');
-           expect(graphServer.database).toBe('test-database');
-           expect(graphServer.mock).toBe(false);
+           expect(graphServer.params).toStrictEqual(
+            {'project': 'test-project',
+             'instance': 'test-instance',
+             'database': 'test-database',
+             'mock': false
+           });
         });
 
         it('should fail to initialize when no port is provided', () => {
@@ -49,10 +52,7 @@ describe('GraphServer', () => {
 
             const defaultServer = new GraphServer(
                 null,
-                'test-project',
-                'test-instance',
-                'test-database',
-                false
+                {}
             );
 
             expect(console.error).toHaveBeenCalledWith('Graph Server was not given a numerical port', {port: null});
@@ -61,20 +61,17 @@ describe('GraphServer', () => {
         it('should cast a string port to a number', () => {
             const server = new GraphServer(
                 '1234',
-                'test-project',
-                'test-instance',
-                'test-database',
-                false
+                {}
             );
 
             expect(server.port).toBe(1234);
         });
 
-        it('should set project, instance, and database values', () => {
-            expect(graphServer.project).toBe('test-project');
-            expect(graphServer.instance).toBe('test-instance');
-            expect(graphServer.database).toBe('test-database');
-            expect(graphServer.mock).toBe(false);
+        it('should set params values', () => {
+            expect(graphServer.params.project).toBe('test-project');
+            expect(graphServer.params.instance).toBe('test-instance');
+            expect(graphServer.params.database).toBe('test-database');
+            expect(graphServer.params.mock).toBe(false);
         });
     });
 
@@ -119,10 +116,12 @@ describe('GraphServer', () => {
                     method: 'POST',
                     body: JSON.stringify({
                         query: queryString,
-                        project: 'test-project',
-                        instance: 'test-instance',
-                        database: 'test-database',
-                        mock: false
+                        params: {
+                            'project': 'test-project',
+                            'instance': 'test-instance',
+                            'database': 'test-database',
+                            'mock': false
+                        }
                     })
                 }
             );
