@@ -77,7 +77,7 @@ class SpannerApp {
 
         // mount must be valid
         if (!mount) {
-            throw Error("Must have a valid HTML element to mount the app");
+            throw Error('Must have a valid HTML element to mount the app');
         }
         this.mount = mount;
 
