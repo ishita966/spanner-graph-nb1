@@ -115,10 +115,10 @@ class NetworkVisualizationMagics(Magics):
             query=self.cell,
             port=GraphServer.port,
             params={
-                 "project":self.args.project,
-                 "instance":self.args.instance,
-                 "database":self.args.database,
-                 "mock":self.args.mock,
+                 "project": self.args.project,
+                 "instance": self.args.instance,
+                 "database": self.args.database,
+                 "mock": self.args.mock,
             })
         display(HTML(html_content))
 

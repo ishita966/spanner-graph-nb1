@@ -130,7 +130,7 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
     def do_json_response(self, data):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header('Content-type', 'application/json')
+        self.send_header("Content-type", "application/json")
         self.send_header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
@@ -142,23 +142,21 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
         self.do_json_response(data)
 
     def parse_post_data(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length).decode('utf-8')
+        content_length = int(self.headers["Content-Length"])
+        post_data = self.rfile.read(content_length).decode("utf-8")
         return json.loads(post_data)
 
     def handle_get_ping(self):
-        self.do_message_response('pong')
+        self.do_message_response("pong")
 
     def handle_post_ping(self):
         data = self.parse_post_data()
-        self.do_data_response({'your_request': data})
+        self.do_data_response({"your_request": data})
 
     def handle_post_query(self):
         data = self.parse_post_data()
-        params = json.loads(data['params'])
-        response = execute_query(
-
-            
+        params = json.loads(data["params"])
+        response = execute_query(            
             project=params["project"],
             instance=params["instance"],
             database=params["database"],
