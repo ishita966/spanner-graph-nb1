@@ -7,7 +7,6 @@ The Spanner Graph Notebook tool lets you visually query [Spanner Graph](https://
 
 ## Table of Contents  
 * [Prerequisites](#prerequisites)
-* [Limitationss](#limitations)
 * [`%%spanner_graph` IPython Magics](#magic-usage)
 * [Google Colab Usage (Installation-Free)](#colab-usage)
 * [Installation and Usage in Jupyter Notebook](#jupyter-usage)
@@ -18,12 +17,6 @@ The Spanner Graph Notebook tool lets you visually query [Spanner Graph](https://
 </h2>
 
 To use this tool, you'll need to create a GCP project, a Spanner instance and a Spanner database with graph. You can follow our [Getting started with Spanner Graph](https://codelabs.developers.google.com/codelabs/spanner-graph-getting-started#0) codelab which walks through the setup.
-
-<h2 id="limitations">
-  Limitations
-</h2>
-
-The notebook tool works in [Google Colab](https://colab.google/) and local [Jupyter Notebook](https://jupyter.org/). It does not work in [Vertex AI Workbench](https://cloud.google.com/vertex-ai/docs/workbench/introduction) yet, and we are fixing it.
 
 <h2 id="magic-usage">
   <span style="font-family: monospace;">%%spanner_graph</span> IPython Magics
