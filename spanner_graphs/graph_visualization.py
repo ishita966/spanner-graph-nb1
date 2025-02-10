@@ -47,7 +47,7 @@ def _load_image(path: list[str]) -> str:
         with open(file_path, 'rb') as file:
             return base64.b64decode(file.read()).decode('utf-8')
 
-def generate_visualization_html(query, port, params):
+def generate_visualization_html(query: str, port: int, params: str):
         # Get the directory of the current file (magics.py)
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -97,7 +97,7 @@ def generate_visualization_html(query, port, params):
             server_content=server_content,
             app_content=app_content,
             query=query,
-            params=json.dumps(params),
+            params=params,
             port=port,
             id=uuid.uuid4().hex # Prevent html/js selector collisions between cells
         )

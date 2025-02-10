@@ -114,12 +114,12 @@ class NetworkVisualizationMagics(Magics):
         html_content = generate_visualization_html(
             query=self.cell,
             port=GraphServer.port,
-            params={
+            params=json.dumps({
                  "project": self.args.project,
                  "instance": self.args.instance,
                  "database": self.args.database,
                  "mock": self.args.mock,
-            })
+            }))
         display(HTML(html_content))
 
     @cell_magic
