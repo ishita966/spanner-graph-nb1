@@ -71,19 +71,19 @@ class SpannerApp {
         table: null
     };
 
-    constructor({id, port, project, instance, database, mock, mount, query}) {
+    constructor({id, port, params, mount, query}) {
         this.id = id;
         this.lastQuery = query;
 
         // mount must be valid
         if (!mount) {
-            throw Error("Must have a valid HTML element to mount the app");
+            throw Error('Must have a valid HTML element to mount the app');
         }
         this.mount = mount;
 
         this.scaffold();
 
-        this.server = new GraphServer(port, project, instance, database, mock);
+        this.server = new GraphServer(port, params);
         this.server.query(query)
             .then(data => {
                 if (!data) {

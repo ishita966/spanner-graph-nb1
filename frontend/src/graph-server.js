@@ -22,6 +22,13 @@ class GraphServer {
         postQuery: '/post_query',
     };
 
+    /**
+     * Contains parameters needed to create the database object; passed to Python when running a query.
+     * @type {string}
+     */
+    params = null;
+
+
     buildRoute(endpoint) {
         const hostname = window.location.hostname;
 
@@ -34,7 +41,7 @@ class GraphServer {
         }
     }
 
-    constructor(port, project, instance, database, mock) {
+    constructor(port, params) {
         let numericalPort = port;
         if (typeof numericalPort !== 'number') {
             numericalPort = Number.parseInt(numericalPort);
@@ -46,25 +53,19 @@ class GraphServer {
         }
 
         this.port = numericalPort;
-        this.project = project;
-        this.instance = instance;
-        this.database = database;
-        this.mock = mock;
+        this.params = params
     }
 
     query(queryString) {
         const request = {
             query: queryString,
-            project: this.project,
-            instance: this.instance,
-            database: this.database,
-            mock: this.mock
+            params: this.params
         };
 
         this.isFetching = true;
 
         if (typeof google !== 'undefined') {
-            return google.colab.kernel.invokeFunction('spanner.Query', [], request)
+            return google.colab.kernel.invokeFunction('graph_visualization.Query', [], request)
                 .then(result => result.data['application/json'])
                 .finally(() => this.isFetching = false);
         }

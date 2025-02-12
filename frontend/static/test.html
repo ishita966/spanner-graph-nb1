@@ -67,13 +67,15 @@ limitations under the License.
             window.onCustomEvent('page ready');
         }
 
-        const id = 'spanner-test';
-        const project = 'project-foo';
-        const instance = 'instance-foo';
-        const database = 'database-foo';
         const mount = document.querySelector('.mount-spanner-test');
+        params = {
+            'project': 'project-foo',
+            'instance': 'instance-foo',
+            'database': 'database-foo',
+            'mock': true
+        }
         window.app = new SpannerApp({
-            id, project, instance, database, mount, mock: true, query: '', url: ''
+            id: 'spanner-test', port:'', params:params, mount:mount, query: ''
         });
     });
 </script>
