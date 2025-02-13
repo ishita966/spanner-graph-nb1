@@ -42,10 +42,12 @@ LIMIT 50
 (Note: `my-gcp-project`, `my-spanner-instance`, `my-database`, and `MyGraph` are placeholders.  Replace them with your actual values.)
 ```
 
-You can also visualize a local dataset with `--mock` flag.
+You can also visualize a local dataset with `--mock` flag. Note that since this is a cell magic command, you must include two newlines after the command:
 
 ```
 %%spanner_graph --mock
+
+
 ```
 
 
@@ -159,9 +161,12 @@ RETURN SAFE_TO_JSON(person) AS person_json,
 
 ## Testing changes
 
-After adding new changes, please run unit and integration tests with the command below:
+First, install the test dependencies:
+```shell
+pip install -r requirements-test.txt
+```
 
-
+Then run unit and integration tests with the command below:
 ```shell
 cd spanner_graphs && python -m unittest discover -s tests -p "*_test.py"
 ```
