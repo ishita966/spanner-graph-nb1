@@ -252,6 +252,62 @@ describe('GraphStore', () => {
             const color = store.getColorForNodeByLabel(mockNode1);
             expect(color).toBe('red');
         });
+
+        it('should return the same color for schema nodes and default nodes with the same label', () => {
+            // Create nodes with labels A, C, E, F
+            const nodeA = new GraphNode({id: '1', label: 'A'});
+            const nodeC = new GraphNode({id: '2', label: 'C'});
+            const nodeE = new GraphNode({id: '3', label: 'E'});
+            const nodeF = new GraphNode({id: '4', label: 'F'});
+            
+            // Create schema nodes with labels A, B, C, D, E, F
+            const schemaNodeA = new GraphNode({id: 's1', label: 'A', isSchema: true});
+            const schemaNodeB = new GraphNode({id: 's2', label: 'B', isSchema: true});
+            const schemaNodeC = new GraphNode({id: 's3', label: 'C', isSchema: true});
+            const schemaNodeD = new GraphNode({id: 's4', label: 'D', isSchema: true});
+            const schemaNodeE = new GraphNode({id: 's5', label: 'E', isSchema: true});
+            const schemaNodeF = new GraphNode({id: 's6', label: 'F', isSchema: true});
+            
+            // Setup a mock config with the complex scenario
+            const mockComplexNodesData = [
+                {id: '1', label: 'A', properties: {}, key_property_names: ['id']},
+                {id: '2', label: 'C', properties: {}, key_property_names: ['id']},
+                {id: '3', label: 'E', properties: {}, key_property_names: ['id']},
+                {id: '4', label: 'F', properties: {}, key_property_names: ['id']}
+            ];
+            
+            const mockComplexSchemaData = {
+                nodeTables: [
+                    {name: 'TableA', labelNames: ['A'], columns: []},
+                    {name: 'TableB', labelNames: ['B'], columns: []},
+                    {name: 'TableC', labelNames: ['C'], columns: []},
+                    {name: 'TableD', labelNames: ['D'], columns: []},
+                    {name: 'TableE', labelNames: ['E'], columns: []},
+                    {name: 'TableF', labelNames: ['F'], columns: []}
+                ],
+                edgeTables: []
+            };
+            
+            // Create a new config with our test data
+            const complexConfig = new GraphConfig({
+                nodesData: mockComplexNodesData,
+                edgesData: [],
+                schemaData: mockComplexSchemaData
+            });
+            
+            // Create a new store with this config
+            const complexStore = new GraphStore(complexConfig);
+            
+            // Verify that regular nodes and schema nodes with the same label get the same color
+            expect(complexStore.getColorForNodeByLabel(nodeA)).toBe(complexStore.getColorForNodeByLabel(schemaNodeA));
+            expect(complexStore.getColorForNodeByLabel(nodeC)).toBe(complexStore.getColorForNodeByLabel(schemaNodeC));
+            expect(complexStore.getColorForNodeByLabel(nodeE)).toBe(complexStore.getColorForNodeByLabel(schemaNodeE));
+            expect(complexStore.getColorForNodeByLabel(nodeF)).toBe(complexStore.getColorForNodeByLabel(schemaNodeF));
+            
+            // Verify that schema-only nodes (B, D) still have colors assigned
+            expect(complexStore.getColorForNodeByLabel(schemaNodeB)).toBeDefined();
+            expect(complexStore.getColorForNodeByLabel(schemaNodeD)).toBeDefined();
+        });
     });
 
     describe('Graph Navigation', () => {

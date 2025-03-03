@@ -85,10 +85,12 @@ describe('GraphServer', () => {
             const originalLocation = window.location;
             // @ts-ignore
             delete window.location;
+            // @ts-ignore
             window.location = { ...originalLocation, hostname: 'vertex-ai-workbench' };
             const route = graphServer.buildRoute('/test-endpoint');
             expect(route).toBe('/proxy/8000/test-endpoint');
 
+            // @ts-ignore
             window.location = originalLocation;
         });
     });
