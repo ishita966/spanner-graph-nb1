@@ -29,7 +29,6 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
     database = get_database_instance(project, instance, database, mock)
 
     try:
-        print("Executing query")
         query_result, fields, rows, schema_json = database.execute_query(query)
         d, ignored_columns = columns_to_native_numpy(query_result, fields)
 
@@ -56,9 +55,6 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
         }
     except Exception as e:
         return {
-                # "response":{
-                #     "schema": schema_json,
-                # },
                 "error": {getattr(e, "message", str(e))}
             }
 
