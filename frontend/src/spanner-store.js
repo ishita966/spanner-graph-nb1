@@ -339,19 +339,9 @@ class GraphStore {
             console.error('Node must have a label', node);
         }
 
-        switch (this.config.viewMode) {
-            case GraphConfig.ViewModes.SCHEMA:
-                const schemaColor = this.config.schemaNodeColors[node.label];
-                if (schemaColor) {
-                    return schemaColor;
-                }
-                break;
-            case GraphConfig.ViewModes.DEFAULT:
-                const nodeColor = this.config.nodeColors[node.label];
-                if (nodeColor) {
-                    return nodeColor;
-                }
-                break;
+        const nodeColor = this.config.nodeColors[node.label];
+        if (nodeColor) {
+            return nodeColor;
         }
 
         return 'rgb(100, 100, 100)';
