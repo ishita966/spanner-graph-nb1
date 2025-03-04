@@ -159,8 +159,10 @@ class GraphConfig {
     constructor({ nodesData, edgesData, colorPalette, colorScheme, rowsData, schemaData, queryResult}) {
         this.nodes = this.parseNodes(nodesData);
         this.edges = this.parseEdges(edgesData);
-        this.nodeColors = this.assignColors(this.nodes);
         this.parseSchema(schemaData);
+
+        this.nodeColors = {};
+        this.assignColors();
 
         if (colorPalette && Array.isArray(colorPalette)) {
             this.colorPalette = colorPalette;
@@ -175,41 +177,36 @@ class GraphConfig {
     }
 
     /**
-     * @param nodes
-     * @returns {{}} Color map by the node's label
+     * Assigns colors for node labels to the existing color map
      */
-    assignColors(nodes) {
-        const colors = {};
+    assignColors() {
         const colorPalette = this.colorPalette.map(color => color);
 
-        if (!nodes || !nodes instanceof Array) {
-            console.error('Nodes must be array', nodes);
-            throw Error('Nodes must be an array');
+        const labels = new Set();
+
+        for (const node of this.nodes) {
+            labels.add(node.label);
         }
 
-        nodes.forEach(node => {
+        for (const schemaNode of this.schemaNodes) {
+            labels.add(schemaNode.label);
+        }
+
+        for (const label of labels) {
             if (colorPalette.length === 0) {
                 console.error('Node labels exceed the color palette. Assigning default color.');
-                return;
+                continue;
             }
 
-            if (!node || !node instanceof Node) {
-                console.error('Object is not an instance of Node', node);
-                return;
-            }
-
-            const label = node.label;
             if (!label || !label instanceof String) {
                 console.error('Node does not have a label', node);
-                return;
+                continue;
             }
 
-            if (!colors[label]) {
-                colors[label] = colorPalette.shift();
+            if (!this.nodeColors[label]) {
+                this.nodeColors[label] = colorPalette.shift();
             }
-        });
-
-        return colors;
+        }
     }
 
     /**
@@ -269,7 +266,6 @@ class GraphConfig {
                 };
         });
         this.schemaEdges = this.parseEdges(edgesData);
-        this.schemaNodeColors = this.assignColors(this.schemaNodes);
     }
 
     /**
