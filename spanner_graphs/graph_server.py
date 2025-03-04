@@ -55,8 +55,8 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
         }
     except Exception as e:
         return {
-                "error": {getattr(e, "message", str(e))}
-            }
+            "error": getattr(e, "message", str(e))
+        }
 
 
 class GraphServer:
