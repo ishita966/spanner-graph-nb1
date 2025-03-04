@@ -133,7 +133,6 @@ class SpannerDatabase:
                     return data, fields, rows, self.schema_json
                 
         except Exception as e:
-            print("Exception in execute_query database.py", e)
             return {}, [], [], self.schema_json
 
 
