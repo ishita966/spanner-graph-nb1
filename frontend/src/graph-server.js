@@ -20,6 +20,7 @@ class GraphServer {
     endpoints = {
         getPing: '/get_ping',
         postQuery: '/post_query',
+        postNodeExpansion: '/post_node_expansion',
     };
 
     /**
@@ -28,6 +29,21 @@ class GraphServer {
      */
     params = null;
 
+    /**
+     * The allowed property types for node expansion
+     * @type {Set<string>}
+     */
+    static ALLOWED_PROPERTY_TYPES_FOR_NODE_EXPANSION_MATCHING = new Set([
+        'BOOL',
+        'BYTES',
+        'DATE',
+        'INT64',
+        'NUMERIC',
+        'FLOAT32',
+        'FLOAT64',
+        'STRING',
+        'TIMESTAMP'
+    ]);
 
     buildRoute(endpoint) {
         const hostname = window.location.hostname;
@@ -54,6 +70,87 @@ class GraphServer {
 
         this.port = numericalPort;
         this.params = params
+    }
+
+    /**
+     * @param {Node} node
+     * @param {Edge.Direction} direction
+     * @param {string|undefined} edgeLabel
+     * @param {{key: string, value: string|number, type: PropertyDeclarationType}[]} properties
+     */
+    nodeExpansion(node, direction, edgeLabel, properties) {
+        if (!node.uid) {
+            return Promise.reject(new Error('Node does not have a UID'));
+        }
+
+        /** @type {{key: string, value: string|number, type: PropertyDeclarationType}[]} */
+        const validProperties = [];
+        if (Array.isArray(properties)) {
+            for (const property of properties) {
+                if (!property.key) {
+                    continue;
+                }
+
+                if (!property.value) {
+                    continue;
+                }
+
+                if (!(typeof property.type === 'string'))
+                {
+                    continue;
+                }
+
+                const upperPropertyType = property.type.toUpperCase();
+                if (!GraphServer.ALLOWED_PROPERTY_TYPES_FOR_NODE_EXPANSION_MATCHING.has(upperPropertyType)) {
+                    continue;
+                }
+
+                validProperties.push(property);
+            }
+        }
+
+        const {project, instance, database, graph} = JSON.parse(this.params);
+
+        const request = {
+            project, instance, database, graph,
+            uid: node.uid,
+            node_labels: node.labels,
+            node_properties: validProperties,
+            direction
+        };
+
+        if (typeof edgeLabel == 'string' && edgeLabel.length) {
+            request.edge_label = edgeLabel;
+        }
+
+        this.isFetching = true;
+
+        if (typeof google !== 'undefined') {
+            return google.colab.kernel.invokeFunction('graph_visualization.NodeExpansion', [request, this.params])
+                .then(result => result.data['application/json'])
+                .finally(() => this.isFetching = false);
+        }
+
+        // For non-Colab environment, combine params and request
+        const fullRequest = {
+            ...JSON.parse(this.params),
+            ...request
+        };
+
+        return fetch(this.buildRoute(this.endpoints.postNodeExpansion), {
+            method: 'POST',
+            body: JSON.stringify(fullRequest)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // Assuming JSON response
+            })
+            .catch(error => {
+                console.error('There has been a problem with your fetch operation:', error);
+            })
+            .finally(() => this.isFetching = false);
     }
 
     query(queryString) {

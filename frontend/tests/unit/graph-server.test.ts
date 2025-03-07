@@ -18,6 +18,8 @@ import fs from "fs";
 
 // @ts-ignore
 const GraphServer = require('../../src/graph-server');
+// @ts-ignore
+const GraphNode = require('../../src/models/node');
 
 describe('GraphServer', () => {
     let graphServer: typeof GraphServer;
@@ -26,25 +28,25 @@ describe('GraphServer', () => {
 
     beforeEach(() => {
         mockFetch.mockClear();
-        graphServer = new GraphServer(
-            8000,
-            {'project': 'test-project',
-             'instance': 'test-instance',
-             'database': 'test-database',
-             'mock': false
-            }
-        );
+        graphServer = new GraphServer(8000, JSON.stringify({
+            'project': 'test-project',
+            'instance': 'test-instance',
+            'database': 'test-database',
+            'graph': 'test-graph',
+            'mock': false
+        }));
     });
 
     describe('constructor', () => {
         it('should initialize with the default variables', () => {
-           expect(graphServer.port).toBe(8000);
-           expect(graphServer.params).toStrictEqual(
-            {'project': 'test-project',
-             'instance': 'test-instance',
-             'database': 'test-database',
-             'mock': false
-           });
+            expect(graphServer.port).toBe(8000);
+            expect(graphServer.params).toBe(JSON.stringify({
+                'project': 'test-project',
+                'instance': 'test-instance',
+                'database': 'test-database',
+                'graph': 'test-graph',
+                'mock': false
+            }));
         });
 
         it('should fail to initialize when no port is provided', () => {
@@ -68,10 +70,12 @@ describe('GraphServer', () => {
         });
 
         it('should set params values', () => {
-            expect(graphServer.params.project).toBe('test-project');
-            expect(graphServer.params.instance).toBe('test-instance');
-            expect(graphServer.params.database).toBe('test-database');
-            expect(graphServer.params.mock).toBe(false);
+            const params = JSON.parse(graphServer.params);
+            expect(params.project).toBe('test-project');
+            expect(params.instance).toBe('test-instance');
+            expect(params.database).toBe('test-database');
+            expect(params.graph).toBe('test-graph');
+            expect(params.mock).toBe(false);
         });
     });
 
@@ -86,12 +90,162 @@ describe('GraphServer', () => {
             // @ts-ignore
             delete window.location;
             // @ts-ignore
-            window.location = { ...originalLocation, hostname: 'vertex-ai-workbench' };
+            window.location = {...originalLocation, hostname: 'vertex-ai-workbench'};
             const route = graphServer.buildRoute('/test-endpoint');
             expect(route).toBe('/proxy/8000/test-endpoint');
 
             // @ts-ignore
             window.location = originalLocation;
+        });
+    });
+
+    describe('node expansion', () => {
+        const mockDataPath = path.join(__dirname, '../mock-data.json');
+        const mockData = JSON.parse(fs.readFileSync(mockDataPath, 'utf8'));
+        let mockNode: typeof GraphNode;
+
+        beforeEach(() => {
+            mockFetch.mockImplementation(() =>
+                Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve(mockData)
+                })
+            );
+
+            mockNode = new GraphNode({
+                identifier: 'test-id',
+                labels: ['TestLabel'],
+                key_property_names: ['test_key'],
+                properties: {
+                    test_key: 'test-value'
+                }
+            });
+        });
+
+        it('should make POST request with the correct parameters', async () => {
+            const graphNode = new GraphNode({
+                identifier: 'node1',
+                labels: ['TestLabel1'],
+                key_property_names: ['name'],
+                properties: {
+                    name: 'my-node-name'
+                }
+            });
+
+            await graphServer.nodeExpansion(
+                graphNode, 
+                'OUTGOING', 
+                undefined, 
+                [{
+                    key: 'name',
+                    value: 'my-node-name',
+                    type: 'STRING'
+                }]
+            );
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                'http://localhost:8000/post_node_expansion',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        project: 'test-project',
+                        instance: 'test-instance',
+                        database: 'test-database',
+                        graph: 'test-graph',
+                        mock: false,
+                        uid: 'node1',
+                        node_labels: ['TestLabel1'],
+                        node_properties: [{
+                            key: 'name',
+                            value: 'my-node-name',
+                            type: 'STRING'
+                        }],
+                        direction: 'OUTGOING'
+                    })
+                }
+            );
+        });
+
+        it('should accept valid property types', async () => {
+            const validTypes = ['INT64', 'STRING', 'FLOAT64', 'TIMESTAMP', 'BYTES', 'DATE', 'ENUM', 'NUMERIC', 'FLOAT32'];
+            
+            for (const type of validTypes) {
+                await expect(graphServer.nodeExpansion(
+                    mockNode, 
+                    'OUTGOING', 
+                    undefined, 
+                    [{
+                        key: 'test_key',
+                        value: 'test-value',
+                        type: type
+                    }]
+                )).resolves.toBeDefined();
+            }
+        });
+
+        it('should accept lowercase valid property types', async () => {
+            const validTypes = ['int64', 'string', 'float64', 'timestamp', 'bytes', 'date', 'numeric', 'float32'];
+            
+            for (const type of validTypes) {
+                const property = {
+                    key: 'test_key',
+                    value: 'test_value',
+                    type
+                };
+
+                await graphServer.nodeExpansion(
+                    mockNode,
+                    'OUTGOING',
+                    undefined,
+                    [property]
+                );
+
+                expect(mockFetch).toHaveBeenCalledWith(
+                    expect.any(String),
+                    expect.objectContaining({
+                        body: expect.stringContaining(`"node_properties":[${JSON.stringify(property)}]`)
+                    })
+                );
+                mockFetch.mockClear();
+            }
+        });
+
+        it('should silently skip invalid property types', async () => {
+            const invalidTypes = [
+                'TYPE_CODE_UNSPECIFIED',
+                'ARRAY',
+                'ENUM',
+                'STRUCT',
+                'JSON',
+                'PROTO',
+                null,
+                undefined,
+                [],
+                {},
+                12345,
+                'foo'
+            ];
+
+            for (const type of invalidTypes) {
+                await graphServer.nodeExpansion(
+                    mockNode, 
+                    'OUTGOING', 
+                    undefined, 
+                    [{
+                        key: 'test-key',
+                        value: 'test-value',
+                        type: type
+                    }]
+                );
+                
+                expect(mockFetch).toHaveBeenCalledWith(
+                    expect.any(String),
+                    expect.objectContaining({
+                        body: expect.stringContaining('"node_properties":[]')
+                    })
+                );
+                mockFetch.mockClear();
+            }
         });
     });
 
@@ -118,12 +272,7 @@ describe('GraphServer', () => {
                     method: 'POST',
                     body: JSON.stringify({
                         query: queryString,
-                        params: {
-                            'project': 'test-project',
-                            'instance': 'test-instance',
-                            'database': 'test-database',
-                            'mock': false
-                        }
+                        params: graphServer.params
                     })
                 }
             );
