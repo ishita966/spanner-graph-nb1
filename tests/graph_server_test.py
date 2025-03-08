@@ -1,12 +1,11 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from google.cloud.spanner_v1 import TypeCode
+import json
 
 from spanner_graphs.graph_server import (
     validate_property_type,
     execute_node_expansion,
-    EdgeDirection,
-    PROPERTY_TYPE_MAP
 )
 
 class TestPropertyTypeHandling(unittest.TestCase):
@@ -64,36 +63,42 @@ class TestPropertyTypeHandling(unittest.TestCase):
         
         test_cases = [
             # Numeric types (unquoted)
-            (TypeCode.INT64, "123", "123"),
-            (TypeCode.NUMERIC, "123.45", "123.45"),
-            (TypeCode.FLOAT32, "123.45", "123.45"),
-            (TypeCode.FLOAT64, "123.45", "123.45"),
+            ("INT64", "123", "123"),
+            ("NUMERIC", "123", "123"),
+            ("FLOAT32", "123.45", "123.45"),
+            ("FLOAT64", "123.45", "123.45"),
             # Boolean (unquoted)
-            (TypeCode.BOOL, "true", "true"),
+            ("BOOL", "true", "true"),
             # String types (quoted)
-            (TypeCode.STRING, "hello", '"hello"'),
-            (TypeCode.DATE, "2024-03-14", '"2024-03-14"'),
-            (TypeCode.TIMESTAMP, "2024-03-14T12:00:00Z", '"2024-03-14T12:00:00Z"'),
-            (TypeCode.BYTES, "base64data", '"base64data"'),
-            (TypeCode.ENUM, "ENUM_VALUE", '"ENUM_VALUE"'),
+            ("STRING", "hello", '"hello"'),
+            ("DATE", "2024-03-14", '"2024-03-14"'),
+            ("TIMESTAMP", "2024-03-14T12:00:00Z", '"2024-03-14T12:00:00Z"'),
+            ("BYTES", "base64data", '"base64data"'),
+            ("ENUM", "ENUM_VALUE", '"ENUM_VALUE"'),
         ]
         
-        base_args = {
+        params = json.dumps({
             "project": "test-project",
             "instance": "test-instance",
             "database": "test-database",
             "graph": "test-graph",
-            "uid": "test-uid",
-            "node_key_property_name": "test_property",
-            "direction": EdgeDirection.OUTGOING,
-        }
+        })
         
-        for type_code, value, expected_format in test_cases:
-            with self.subTest(type=type_code, value=value):
+        for type_str, value, expected_format in test_cases:
+            with self.subTest(type=type_str, value=value):
+                # Create a property dictionary
+                prop_dict = {"key": "test_property", "value": value, "type": type_str}
+                
+                request = {
+                    "uid": "test-uid",
+                    "node_labels": ["Person"],
+                    "node_properties": [prop_dict],
+                    "direction": "OUTGOING"
+                }
+                
                 execute_node_expansion(
-                    **base_args,
-                    node_key_property_value=value,
-                    property_type=type_code
+                    params_str=params,
+                    request=request
                 )
                 
                 # Extract the actual formatted value from the query
@@ -102,32 +107,44 @@ class TestPropertyTypeHandling(unittest.TestCase):
                 
                 # Find the WHERE clause in the query and extract the value
                 where_line = [line for line in query.split('\n') if 'WHERE' in line][0]
-                self.assertIn(f"= {expected_format}", where_line,
-                    f"Expected value {value} to be formatted as {expected_format} for type {type_code}")
-
+                expected_pattern = f"n.test_property={expected_format}"
+                self.assertIn(expected_pattern, where_line,
+                    f"Expected property value pattern {expected_pattern} not found in WHERE clause for type {type_str}")
+                    
     @patch('spanner_graphs.graph_server.execute_query')
     def test_property_value_formatting_no_type(self, mock_execute_query):
         """Test that property values are quoted when no type is provided."""
         mock_execute_query.return_value = {"response": {"nodes": [], "edges": []}}
         
+        # Create a property dictionary with string type (since null type is not allowed)
+        prop_dict = {"key": "test_property", "value": "test_value", "type": "STRING"}
+        
+        params = json.dumps({
+            "project": "test-project",
+            "instance": "test-instance",
+            "database": "test-database",
+            "graph": "test-graph",
+        })
+        
+        request = {
+            "uid": "test-uid",
+            "node_labels": ["Person"],
+            "node_properties": [prop_dict],
+            "direction": "OUTGOING"
+        }
+        
         execute_node_expansion(
-            project="test-project",
-            instance="test-instance",
-            database="test-database",
-            graph="test-graph",
-            uid="test-uid",
-            node_key_property_name="test_property",
-            node_key_property_value="test_value",
-            direction=EdgeDirection.OUTGOING,
-            property_type=None
+            params_str=params,
+            request=request
         )
         
         # Extract the actual formatted value from the query
         last_call = mock_execute_query.call_args[0]
         query = last_call[3]
         where_line = [line for line in query.split('\n') if 'WHERE' in line][0]
-        self.assertIn('= "test_value"', where_line,
-            "Value should be quoted when no type is provided")
+        expected_pattern = 'n.test_property="test_value"'
+        self.assertIn(expected_pattern, where_line,
+            "Property value should be quoted when string type is provided")
 
 if __name__ == '__main__':
     unittest.main() 

@@ -42,6 +42,17 @@ PROPERTY_TYPE_MAP = {
     'TIMESTAMP': TypeCode.TIMESTAMP
 }
 
+class NodePropertyForDataExploration:
+    def __init__(self, key: str, value: Union[str, int, float, bool], type: TypeCode):
+        self.key = key
+        self.value = value
+        self.type = type
+
+
+class EdgeDirection(Enum):
+    INCOMING = "INCOMING"
+    OUTGOING = "OUTGOING"
+
 def validate_property_type(property_type: str) -> TypeCode:
     """
     Validates and converts a property type string to a Spanner TypeCode.
@@ -68,26 +79,95 @@ def validate_property_type(property_type: str) -> TypeCode:
     
     return PROPERTY_TYPE_MAP[property_type]
 
-class EdgeDirection(Enum):
-    INCOMING = "INCOMING"
-    OUTGOING = "OUTGOING"
+def validate_node_expansion_request(data) -> (list[NodePropertyForDataExploration], EdgeDirection):
+    required_fields = ["project", "instance", "database", "graph", "uid", "node_labels", "direction"]
+    missing_fields = [field for field in required_fields if data.get(field) is None]
 
-class NodeProperty:
-    def __init__(self, key: str, value: Union[str, int, float, bool], type: TypeCode):
-        self.key = key
-        self.value = value
-        self.type = type
+    if missing_fields:
+        raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
+    node_labels = data.get("node_labels")
+    node_properties = data.get("node_properties", [])
+
+    # Validate node_labels
+    if not isinstance(node_labels, list):
+        raise ValueError("node_labels must be an array")
+
+    for label in node_labels:
+        if not isinstance(label, str):
+            raise ValueError("Each node label must be a string")
+
+    # Validate node_properties
+    if not isinstance(node_properties, list):
+        raise ValueError("node_properties must be an array")
+
+    validated_properties: list[NodePropertyForDataExploration] = []
+    for idx, prop in enumerate(node_properties):
+        if not isinstance(prop, dict):
+            raise ValueError(f"Property at index {idx} must be an object")
+
+        if not all(field in prop for field in ["key", "value", "type"]):
+            raise ValueError(f"Property at index {idx} is missing required fields (key, value, type)")
+
+        try:
+            prop_type_str = prop["type"]
+            if isinstance(prop_type_str, str):
+                prop_type = validate_property_type(prop_type_str)
+
+                value = prop["value"]
+                if prop_type in (TypeCode.INT64, TypeCode.NUMERIC):
+                    if not (isinstance(value, int) or (isinstance(value, str) and value.isdigit())):
+                        raise ValueError(f"Property '{prop['key']}' value must be a number for type {prop_type_str}")
+                elif prop_type in (TypeCode.FLOAT32, TypeCode.FLOAT64):
+                    try:
+                        float(value)
+                    except (ValueError, TypeError):
+                        raise ValueError(
+                            f"Property '{prop['key']}' value must be a valid float for type {prop_type_str}")
+                elif prop_type == TypeCode.BOOL:
+                    if not isinstance(value, bool) and not (isinstance(value, str) and value.lower() in ["true", "false"]):
+                        raise ValueError(f"Property '{prop['key']}' value must be a boolean for type {prop_type_str}")
+
+                validated_properties.append(NodePropertyForDataExploration(
+                    key=prop["key"],
+                    value=prop["value"],
+                    type=prop_type
+                ))
+            else:
+                raise ValueError(f"Property type at index {idx} must be a string")
+        except ValueError as e:
+            raise ValueError(f"Invalid property type in property at index {idx}: {str(e)}")
+
+    try:
+        direction = EdgeDirection(data.get("direction"))
+    except ValueError:
+        raise ValueError(f"Invalid direction: must be INCOMING or OUTGOING, got \"{data.get('direction')}\"")
+
+    return validated_properties, direction
 
 def execute_node_expansion(
-    project: str,
-    instance: str,
-    database: str,
-    node_labels: list[str],
-    node_properties: list[NodeProperty],
-    graph: str,
-    uid: str,
-    direction: EdgeDirection,
-    edge_label: str = None):
+    params_str: str,
+    request: dict) -> dict:
+    """Execute a node expansion query to find connected nodes and edges.
+    
+    Args:
+        params_str: A JSON string containing connection parameters (project, instance, database, graph, mock).
+        request: A dictionary containing node expansion request details (uid, node_labels, node_properties, direction, edge_label).
+    
+    Returns:
+        dict: A dictionary containing the query response with nodes and edges.
+    """
+
+    params = json.loads(params_str)
+    node_properties, direction = validate_node_expansion_request(params | request)
+
+    project = params.get("project")
+    instance = params.get("instance")
+    database = params.get("database")
+    graph = params.get("graph")
+    uid = request.get("uid")
+    node_labels = request.get("node_labels")
+    edge_label = request.get("edge_label")
 
     edge = "e" if not edge_label else f"e:{edge_label}"
 
@@ -232,6 +312,8 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
         self.do_json_response(data)
 
     def do_error_response(self, message):
+        if isinstance(message, Exception):
+            message = str(message)
         self.do_json_response({'error': message})
 
     def parse_post_data(self):
@@ -259,98 +341,25 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
         self.do_data_response(response)
 
     def handle_post_node_expansion(self):
-        data = self.parse_post_data()
-        required_fields = ["project", "instance", "database", "graph", "uid", "node_labels", "direction"]
-        missing_fields = [field for field in required_fields if data.get(field) is None]
+        """Handle POST requests for node expansion.
         
-        if missing_fields:
-            self.do_error_response(f"Missing required fields: {', '.join(missing_fields)}")
-            return
-
-        project = data.get("project")
-        instance = data.get("instance")
-        database = data.get("database")
-        graph = data.get("graph")
-        uid = data.get("uid")
-        node_labels = data.get("node_labels")
-        node_properties = data.get("node_properties", [])
-        edge_label = data.get("edge_label")
-
-        # Validate node_labels
-        if not isinstance(node_labels, list):
-            self.do_error_response("node_labels must be an array")
-            return
-
-        for label in node_labels:
-            if not isinstance(label, str):
-                self.do_error_response("Each node label must be a string")
-                return
-
-        # Validate node_properties
-        if not isinstance(node_properties, list):
-            self.do_error_response("node_properties must be an array")
-            return
-            
-        validated_properties: list[NodeProperty] = []
-        for idx, prop in enumerate(node_properties):
-            if not isinstance(prop, dict):
-                self.do_error_response(f"Property at index {idx} must be an object")
-                return
-                
-            if not all(field in prop for field in ["key", "value", "type"]):
-                self.do_error_response(f"Property at index {idx} is missing required fields (key, value, type)")
-                return
-                
-            try:
-                prop_type_str = prop["type"]
-                if isinstance(prop_type_str, str):
-                    prop_type = validate_property_type(prop_type_str)
-                    
-                    value = prop["value"]
-                    if prop_type in (TypeCode.INT64, TypeCode.NUMERIC):
-                        if not (isinstance(value, int) or (isinstance(value, str) and value.isdigit())):
-                            self.do_error_response(f"Property '{prop['key']}' value must be a number for type {prop_type_str}")
-                            return
-                    elif prop_type in (TypeCode.FLOAT32, TypeCode.FLOAT64):
-                        try:
-                            float(value)
-                        except (ValueError, TypeError):
-                            self.do_error_response(f"Property '{prop['key']}' value must be a valid float for type {prop_type_str}")
-                            return
-                    elif prop_type == TypeCode.BOOL:
-                        if not isinstance(value, bool) and not (isinstance(value, str) and value.lower() in ["true", "false"]):
-                            self.do_error_response(f"Property '{prop['key']}' value must be a boolean for type {prop_type_str}")
-                            return
-                    
-                    validated_properties.append(NodeProperty(
-                        key=prop["key"],
-                        value=prop["value"],
-                        type=prop_type
-                    ))
-                else:
-                    self.do_error_response(f"Property type at index {idx} must be a string")
-                    return
-            except ValueError as e:
-                self.do_error_response(f"Invalid property type in property at index {idx}: {str(e)}")
-                return
-        
+        Expects a JSON payload with:
+        - params: A JSON string containing connection parameters (project, instance, database, graph)
+        - request: A dictionary with node details (uid, node_labels, node_properties, direction, edge_label)
+        """
         try:
-            direction = EdgeDirection(data.get("direction"))
-        except ValueError:
-            self.do_error_response(f"Invalid direction: must be INCOMING or OUTGOING, got \"{data.get('direction')}\"")
-            return
+            data = self.parse_post_data()
 
-        self.do_data_response(execute_node_expansion(
-            project=project, 
-            instance=instance, 
-            database=database,
-            node_labels=node_labels,
-            node_properties=validated_properties,
-            graph=graph, 
-            uid=uid,
-            direction=direction,
-            edge_label=edge_label,
-        ))
+            # Execute node expansion with:
+            # - params_str: JSON string with connection parameters (project, instance, database, graph)
+            # - request: Dict with node details (uid, node_labels, node_properties, direction, edge_label)
+            self.do_data_response(execute_node_expansion(
+                params_str=data.get("params"),
+                request=data.get("request")
+            ))
+        except BaseException as e:
+            self.do_error_response(e)
+            return
 
     def do_GET(self):
         if self.path == GraphServer.endpoints["get_ping"]:

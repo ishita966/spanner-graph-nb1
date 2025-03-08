@@ -109,10 +109,7 @@ class GraphServer {
             }
         }
 
-        const {project, instance, database, graph} = JSON.parse(this.params);
-
         const request = {
-            project, instance, database, graph,
             uid: node.uid,
             node_labels: node.labels,
             node_properties: validProperties,
@@ -131,15 +128,12 @@ class GraphServer {
                 .finally(() => this.isFetching = false);
         }
 
-        // For non-Colab environment, combine params and request
-        const fullRequest = {
-            ...JSON.parse(this.params),
-            ...request
-        };
-
         return fetch(this.buildRoute(this.endpoints.postNodeExpansion), {
             method: 'POST',
-            body: JSON.stringify(fullRequest)
+            body: JSON.stringify({
+                params: this.params,
+                request
+            })
         })
             .then(response => {
                 if (!response.ok) {

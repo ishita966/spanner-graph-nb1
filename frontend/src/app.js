@@ -164,6 +164,11 @@ class SpannerApp {
                                     return;
                                 }
 
+                                if (data.error) {
+                                    this.graph.showErrorStateForNode(node, error);
+                                    return;
+                                }
+
                                 const newData = this.store.appendGraphData(data.response.nodes, data.response.edges)
                                 if (newData) {
                                     // Show success message before appending data

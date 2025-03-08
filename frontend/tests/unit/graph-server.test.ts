@@ -148,19 +148,23 @@ describe('GraphServer', () => {
                 {
                     method: 'POST',
                     body: JSON.stringify({
-                        project: 'test-project',
-                        instance: 'test-instance',
-                        database: 'test-database',
-                        graph: 'test-graph',
-                        mock: false,
-                        uid: 'node1',
-                        node_labels: ['TestLabel1'],
-                        node_properties: [{
-                            key: 'name',
-                            value: 'my-node-name',
-                            type: 'STRING'
-                        }],
-                        direction: 'OUTGOING'
+                        params: JSON.stringify({
+                            project: 'test-project',
+                            instance: 'test-instance',
+                            database: 'test-database',
+                            graph: 'test-graph',
+                            mock: false
+                        }),
+                        request: {
+                            uid: 'node1',
+                            node_labels: ['TestLabel1'],
+                            node_properties: [{
+                                key: 'name',
+                                value: 'my-node-name',
+                                type: 'STRING'
+                            }],
+                            direction: 'OUTGOING'
+                        }
                     })
                 }
             );
