@@ -102,6 +102,7 @@ class SpannerDatabase:
             type found for the given field.
             - A list of StructType.Fields representing the fields in the result set.
             - A list of rows as returned by the query execution.
+            - The error message if any.
         """
         self.schema_json = None
         if not is_test_query:
@@ -130,10 +131,10 @@ class SpannerDatabase:
                         else:
                             data[field.name].append(value)
 
-                    return data, fields, rows, self.schema_json
+                    return data, fields, rows, self.schema_json, None
                 
         except Exception as e:
-            return {}, [], [], self.schema_json
+            return {},[],[], self.schema_json, e 
 
 
 class MockSpannerResult:
