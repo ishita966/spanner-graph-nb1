@@ -188,7 +188,7 @@ def execute_node_expansion(
         if node_property.type in (TypeCode.INT64, TypeCode.NUMERIC, TypeCode.FLOAT32, TypeCode.FLOAT64, TypeCode.BOOL):
             value_str = node_property.value
         else:
-            value_str = f"\"{node_property.value}\""
+            value_str = f"\'''{node_property.value}\'''"
         node_property_strings.append(f"n.{node_property.key}={value_str}")
 
     query = f"""
