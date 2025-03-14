@@ -325,6 +325,7 @@ class SpannerApp {
                     z-index: 10;
                     display: flex;
                     align-items: center;
+                    white-space: pre-wrap;
                     
                     background-color: #f8d7da;
                     border: 1px solid #f5c6cb;
