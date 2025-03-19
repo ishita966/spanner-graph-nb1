@@ -207,7 +207,7 @@ class GraphConfig {
 
         for (const uid of Object.keys(this.nodes)) {
             const node = this.nodes[uid];
-            if (!node || !(node instanceof Node)) {
+            if (!node || !(node instanceof Node) || node.isIntermediateNode()) {
                 continue;
             }
 
@@ -411,7 +411,8 @@ class GraphConfig {
         const newEdges = this.parseEdges(edgesData);
 
         for (const uid of Object.keys(newNodes)) {
-            if (!this.nodes[uid]) {
+            const existingNode = this.nodes[uid];
+            if (!(existingNode instanceof Node) || existingNode.isIntermediateNode()) {
                 this.nodes[uid] = newNodes[uid];
             }
         }

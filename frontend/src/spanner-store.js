@@ -450,9 +450,13 @@ class GraphStore {
      * @returns {string} The color for the node based on its label.
      */
     getColorForNodeByLabel(node) {
-        const defaultColor = 'rgb(100, 100, 100)';
+        const defaultColor = 'rgb(100, 100, 100)'
         if (!node || !(node instanceof Node)) {
             return defaultColor;
+        }
+
+        if (node.isIntermediateNode()) {
+            return 'rgb(128, 134, 139)';
         }
 
         const nodeColor = this.config.nodeColors[node.getLabels()];
@@ -489,7 +493,8 @@ class GraphStore {
         const newNodes = [];
         if (Array.isArray(nodesData)) {
             for (const nodeData of nodesData) {
-                if (this.config.nodes[nodeData.identifier]) {
+                const existingNode = this.config.nodes[nodeData.identifier];
+                if (existingNode && !existingNode.isIntermediateNode()) {
                     continue;
                 }
 

@@ -306,4 +306,73 @@ describe('GraphConfig', () => {
             expect(mockConfig.nodeCount).toBe(2);
         });
     });
+
+    describe('Intermediate Node Handling', () => {
+        test('should exclude intermediate nodes from color assignment', () => {
+            const mockConfig = new GraphConfig({
+                nodesData: [
+                    { identifier: "1", labels: ['Person'], properties: {} },
+                    { identifier: "2", labels: ['Movie'], properties: {}, intermediate: true }
+                ],
+                edgesData: [],
+                colorPalette: ['#FF0000'],
+                colorScheme: GraphConfig.ColorScheme.LABEL,
+                rowsData: [],
+                schemaData: {},
+                queryResult: {}
+            });
+
+            // Should only assign color to non-intermediate node
+            expect(Object.keys(mockConfig.nodeColors).length).toBe(1);
+            expect(mockConfig.nodeColors['Person']).toBeDefined();
+        });
+
+        test('should allow replacing intermediate nodes with real nodes', () => {
+            const mockConfig = new GraphConfig({
+                nodesData: [
+                    { identifier: "1", labels: ['Person'], properties: {}, intermediate: true }
+                ],
+                edgesData: [],
+                colorPalette: ['#FF0000'],
+                colorScheme: GraphConfig.ColorScheme.LABEL,
+                rowsData: [],
+                schemaData: {},
+                queryResult: {}
+            });
+
+            // Append a real node with the same identifier
+            mockConfig.appendGraphData([
+                { identifier: "1", labels: ['Person'], properties: { name: 'John' } }
+            ], []);
+
+            const node = mockConfig.nodes["1"];
+            expect(node).toBeDefined();
+            expect(node.isIntermediateNode()).toBe(false);
+            expect(node.properties.name).toBe('John');
+        });
+
+        test('should not replace real nodes with intermediate nodes', () => {
+            const mockConfig = new GraphConfig({
+                nodesData: [
+                    { identifier: "1", labels: ['Person'], properties: { name: 'John' } }
+                ],
+                edgesData: [],
+                colorPalette: ['#FF0000'],
+                colorScheme: GraphConfig.ColorScheme.LABEL,
+                rowsData: [],
+                schemaData: {},
+                queryResult: {}
+            });
+
+            // Try to append an intermediate node with the same identifier
+            mockConfig.appendGraphData([
+                { identifier: "1", labels: ['Person'], properties: {}, intermediate: true }
+            ], []);
+
+            const node = mockConfig.nodes["1"];
+            expect(node).toBeDefined();
+            expect(node.isIntermediateNode()).toBe(false);
+            expect(node.properties.name).toBe('John');
+        });
+    });
 });

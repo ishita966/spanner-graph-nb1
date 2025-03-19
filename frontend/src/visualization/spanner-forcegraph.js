@@ -1086,6 +1086,7 @@ class GraphVisualization {
                         }
 
                         const showLabel =
+                            !node.isIntermediateNode() && (
                             // The user has chosen to view labels
                             this.store.config.showLabels ||
                             // Always show labels in Schema view
@@ -1096,7 +1097,7 @@ class GraphVisualization {
                             this.selectedNodeNeighbors.includes(node) ||
                             this.focusedNodeNeighbors.includes(node) ||
                             this.focusedEdgeNeighbors.includes(node) ||
-                            this.selectedEdgeNeighbors.includes(node);
+                            this.selectedEdgeNeighbors.includes(node));
 
                         // Init label
                         ctx.save();
@@ -1438,7 +1439,7 @@ class GraphVisualization {
      */
     _showMouseContextMenu(node, event) {
         // Don't show context menu in schema mode
-        if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA) {
+        if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA || node.isIntermediateNode()) {
             return;
         }
 

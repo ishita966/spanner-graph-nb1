@@ -76,4 +76,17 @@ def get_nodes_edges(data: Dict[str, List[Any]], fields: List[StructType.Field], 
                     edge = Edge.from_json(item)
                     edges.append(edge)
 
+    # Create placeholder nodes for nodes that were not returned
+    # from the query but are identified in the edges
+    missing_node_identifiers = set()
+    for edge in edges:
+        if edge.source not in node_identifiers:
+            missing_node_identifiers.add(edge.source)
+        if edge.destination not in node_identifiers:
+            missing_node_identifiers.add(edge.destination)
+
+    for identifier in missing_node_identifiers:
+        nodes.append(Node.make_intermediate(identifier))
+        node_identifiers.add(identifier)
+
     return nodes, edges

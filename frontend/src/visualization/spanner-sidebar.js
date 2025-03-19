@@ -277,7 +277,9 @@ class SidebarConstructor {
         if (this.store.config.selectedGraphObject) {
             if (this.store.config.selectedGraphObject instanceof Node) {
                 this.properties();
-                this.expandNode();
+                if (!this.store.config.selectedGraphObject.isIntermediateNode()) {
+                    this.expandNode();
+                }
                 this.neighbors();
             } else {
                 this.neighbors();
