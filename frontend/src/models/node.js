@@ -13,16 +13,14 @@
  * limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    GraphObject = require('./graph-object');
-}
+import GraphObject from './graph-object';
 
 /**
  * Represents a graph node.
  * @class
  * @extends GraphObject
  */
-class Node extends GraphObject {
+class GraphNode extends GraphObject {
     /**
      * Arbitrary value
      * @type {number}
@@ -96,6 +94,4 @@ class Node extends GraphObject {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Node;
-}
+export default GraphNode;

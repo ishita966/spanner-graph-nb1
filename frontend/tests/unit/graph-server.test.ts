@@ -17,9 +17,9 @@ import path from "path";
 import fs from "fs";
 
 // @ts-ignore
-const GraphServer = require('../../src/graph-server');
+import GraphServer from '../../src/graph-server';
 // @ts-ignore
-const GraphNode = require('../../src/models/node');
+import GraphNode from '../../src/models/node';
 
 describe('GraphServer', () => {
     let graphServer: typeof GraphServer;

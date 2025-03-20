@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-const GraphStore = require('../../../src/spanner-store');
-const GraphConfig = require('../../../src/spanner-config');
-const GraphNode = require('../../../src/models/node');
-const Edge = require('../../../src/models/edge');
-const SpannerMenu = require('../../../src/visualization/spanner-menu');
-const mockData = require('../../mock-data.json');
+import GraphStore from '../../../src/spanner-store';
+import GraphConfig from '../../../src/spanner-config';
+import GraphNode from '../../../src/models/node';
+import Edge from '../../../src/models/edge';
+import SpannerMenu from '../../../src/visualization/spanner-menu';
+import mockData from '../../mock-data.json';
 
 describe('SpannerMenu', () => {
     let store;

@@ -15,10 +15,10 @@
  *
  */
 
-const http = require('http');
-const httpServer = require('http-server');
-const fs = require('fs');
-const path = require('path');
+import 'http';
+import 'http-server'
+import fs from 'fs';
+import path from "path";
 
 
 class ServeFrontend {
@@ -177,11 +177,6 @@ class MockBackend {
     }
 }
 
-module.exports = {
-    ServeFrontend,
-    MockBackend
-};
-
 // Check if this file is being run directly
 if (require.main === module) {
     const frontend = ServeFrontend.getInstance();
@@ -200,3 +195,5 @@ if (require.main === module) {
         process.exit(0);
     });
 }
+
+export { ServeFrontend, MockBackend };

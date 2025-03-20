@@ -14,7 +14,7 @@
  */
 
 // @ts-ignore
-const GraphNode = require('../../../src/models/node.js');
+import GraphNode from '../../../src/models/node.js';
 
 describe('Node', () => {
     const validNodeData = {

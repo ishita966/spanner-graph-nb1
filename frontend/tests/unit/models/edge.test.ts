@@ -14,7 +14,7 @@
  */
 
 // @ts-ignore
-const Edge = require('../../../src/models/edge');
+import Edge from "../../../src/models/edge";
 
 describe('Edge', () => {
     const validEdgeData = {

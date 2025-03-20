@@ -13,9 +13,11 @@
 # limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    GraphStore = require('../spanner-store');
-}
+import GraphObject from '../models/graph-object.js';
+import GraphEdge from '../models/edge.js';
+import GraphNode from '../models/node.js';
+import GraphConfig from '../spanner-config.js';
+import GraphStore from '../spanner-store.js';
 
 class SidebarConstructor {
     upArrowSvg =
@@ -60,7 +62,7 @@ class SidebarConstructor {
 
     /**
      * Helper method
-     * @param {Node} node
+     * @param {GraphNode} node
      * @param {Boolean} clickable
      * @param {string|null} customLabel
      * @return {HTMLSpanElement}
@@ -91,7 +93,7 @@ class SidebarConstructor {
 
     /**
      * Helper method
-     * @param {Edge} edge
+     * @param {GraphEdge} edge
      * @param {Boolean} clickable
      * @return {HTMLSpanElement}
      */
@@ -275,7 +277,7 @@ class SidebarConstructor {
         this.title();
 
         if (this.store.config.selectedGraphObject) {
-            if (this.store.config.selectedGraphObject instanceof Node) {
+            if (this.store.config.selectedGraphObject instanceof GraphNode) {
                 this.properties();
                 if (!this.store.config.selectedGraphObject.isIntermediateNode()) {
                     this.expandNode();
@@ -711,7 +713,7 @@ class SidebarConstructor {
         const selectedObjectTitle = () => {
             content.classList.remove('schema-header-content');
 
-            if (selectedObject instanceof Node) {
+            if (selectedObject instanceof GraphNode) {
                 content.appendChild(this._nodeChipHtml(selectedObject));
 
                 if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
@@ -722,7 +724,7 @@ class SidebarConstructor {
                 }
             }
 
-            if (selectedObject instanceof Edge) {
+            if (selectedObject instanceof GraphEdge) {
                 content.appendChild(this._edgeChipHtml(selectedObject));
             }
 
@@ -858,16 +860,16 @@ class SidebarConstructor {
          * @type {HTMLElement[]}
          */
         const neighborRowElements = [];
-        if (selectedObject instanceof Node) {
+        if (selectedObject instanceof GraphNode) {
             const neighborMap = this.store.getNeighborsOfNode(selectedObject);
             for (const nodeUid of Object.keys(neighborMap)) {
                 const node = this.store.getNode(nodeUid);
-                if (!(node instanceof Node)) {
+                if (!(node instanceof GraphNode)) {
                     continue;
                 }
 
                 const edge = neighborMap[nodeUid];
-                if (!(edge instanceof Edge)) {
+                if (!(edge instanceof GraphEdge)) {
                     continue;
                 }
 
@@ -922,7 +924,7 @@ class SidebarConstructor {
 
                 neighborRowElements.push(neighborRowDiv);
             }
-        } else if (selectedObject instanceof Edge) {
+        } else if (selectedObject instanceof GraphEdge) {
             const container = document.createElement('div');
             container.className = 'section';
 
@@ -991,7 +993,7 @@ class SidebarConstructor {
             });
         }
 
-        if (selectedObject instanceof Node) {
+        if (selectedObject instanceof GraphNode) {
             this.elements.neighbors = this._createSection(
                 `Neighbors`, neighborRowElements,
                 true);
@@ -1033,7 +1035,7 @@ class SidebarConstructor {
 
     expandNode() {
         const selectedNode = this.store.config.selectedGraphObject;
-        if (!selectedNode || !(selectedNode instanceof Node)) {
+        if (!selectedNode || !(selectedNode instanceof GraphNode)) {
             return;
         }
 
@@ -1091,7 +1093,7 @@ class SidebarConstructor {
         expandButtons.appendChild(createExpandButton(
             'All incoming edges',
             this.incomingEdgeSvg,
-            () => this.store.requestNodeExpansion(selectedNode, Edge.Direction.INCOMING.description),
+            () => this.store.requestNodeExpansion(selectedNode, GraphEdge.Direction.INCOMING.description),
             true
         ));
 
@@ -1099,7 +1101,7 @@ class SidebarConstructor {
         expandButtons.appendChild(createExpandButton(
             'All outgoing edges',
             this.outgoingEdgeSvg,
-            () => this.store.requestNodeExpansion(selectedNode, Edge.Direction.OUTGOING.description),
+            () => this.store.requestNodeExpansion(selectedNode, GraphEdge.Direction.OUTGOING.description),
             true
         ));
 
@@ -1111,7 +1113,7 @@ class SidebarConstructor {
         // Add individual edge type buttons
         const edgeTypes = this.store.getEdgeTypesOfNodeSorted(selectedNode);
         edgeTypes.forEach(({label, direction}) => {
-            const icon = direction === Edge.Direction.INCOMING.description ? this.incomingEdgeSvg : this.outgoingEdgeSvg;
+            const icon = direction === GraphEdge.Direction.INCOMING.description ? this.incomingEdgeSvg : this.outgoingEdgeSvg;
             expandButtons.appendChild(createExpandButton(
                 label,
                 icon,
@@ -1219,6 +1221,4 @@ class Sidebar {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {Sidebar, SidebarConstructor};
-}
+export { Sidebar, SidebarConstructor };

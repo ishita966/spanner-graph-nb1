@@ -389,18 +389,7 @@ limitations under the License.
             pointer-events: none;
         }
     </style>
-    <script src="../src/models/schema.js"></script>
-    <script src="../src/models/graph-object.js"></script>
-    <script src="../src/models/node.js"></script>
-    <script src="../src/models/edge.js"></script>
-    <script src="../src/spanner-config.js"></script>
-    <script src="../src/visualization/spanner-menu.js"></script>
-    <script src="../src/visualization/spanner-forcegraph.js"></script>
-    <script src="../src/spanner-store.js"></script>
-    <script src="../src/visualization/spanner-sidebar.js"></script>
-    <script src="../src/visualization/spanner-table.js"></script>
-    <script src="../src/graph-server.js"></script>
-    <script src="../src/app.js"></script>
+    <script type="module" onload="initializeApp()" src="../dist/index.js"></script>
 </head>
 <body>
     <div class="visualization-container">
@@ -467,23 +456,7 @@ LIMIT 50"></textarea>
     </div>
 
     <script>
-        let initialized = false;
         const INJECTED_PORT = '{{PORT}}';
-
-        function loadScript(url) {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector(`script[src='${url}']`)) {
-                    return resolve();
-                }
-
-                const script = document.createElement('script');
-                script.className = 'spannerviz-external-dependency'
-                script.src = url;
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-        }
 
         function initializeApp() {
             const mount = document.querySelector('.mount-spanner-test');
@@ -570,18 +543,8 @@ LIMIT 50"></textarea>
             }
         });
 
-        Promise.all([
-            loadScript('https://d3js.org/d3.v5.min.js'),
-            loadScript('https://unpkg.com/d3-dsv'),
-            loadScript('https://unpkg.com/d3-force'),
-            loadScript('https://unpkg.com/force-graph')
-        ]).then(() => {
-            if (window && typeof window.onCustomEvent === 'function') {
-                window.onCustomEvent('page ready');
-            }
-            loadSavedConfig();
-            initializeApp();
-        });
+        // Load saved config but wait for SpannerApp to be available
+        loadSavedConfig();
     </script>
 </body>
 </html> 

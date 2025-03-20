@@ -20,9 +20,7 @@
  * https://jestjs.io/docs/configuration
  */
 
-import type {Config} from 'jest';
-
-const config: Config = {
+const config = {
   // All imported modules in your tests should be mocked automatically
   // automock: false,
 
@@ -95,16 +93,16 @@ const config: Config = {
   // ],
 
   // An array of file extensions your modules use
-  // moduleFileExtensions: [
-  //   "js",
-  //   "mjs",
-  //   "cjs",
-  //   "jsx",
-  //   "ts",
-  //   "tsx",
-  //   "json",
-  //   "node"
-  // ],
+  moduleFileExtensions: [
+    "js",
+    "mjs",
+    "cjs",
+    "jsx",
+    "ts",
+    "tsx",
+    "json",
+    "node"
+  ],
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   // moduleNameMapper: {},
@@ -120,11 +118,9 @@ const config: Config = {
 
   // A preset that is used as a base for Jest's configuration
   // preset: "jest-puppeteer",
-  preset: {
-    'visual': 'jest-puppeteer',
-    'unit': 'ts-jest'
-    // @ts-ignore
-  }[process.env.TEST_TYPE] ?? 'ts-jest',
+  preset: (process.env.TEST_TYPE === 'visual') 
+    ? 'jest-puppeteer' 
+    : ((!process.env.TEST_TYPE || process.env.TEST_TYPE === 'unit') ? 'ts-jest' : 'ts-jest'),
 
   // Run tests from one or more projects
   // projects: undefined,
@@ -148,12 +144,10 @@ const config: Config = {
   // rootDir: undefined,
 
   // A list of paths to directories that Jest should use to search for files in
-  // @ts-ignore
   roots: [
     process.env.TEST_TYPE === 'visual' && './tests/visual',
     (!process.env.TEST_TYPE || process.env.TEST_TYPE === 'unit') && './tests/unit',
   ].filter(Boolean),
-
 
   // Allows you to use a custom runner instead of Jest's default test runner
   // runner: "jest-runner",
@@ -162,7 +156,6 @@ const config: Config = {
   // setupFiles: [],
 
   // A list of paths to modules that run some code to configure or set up the testing framework before each test
-  // @ts-ignore
   setupFilesAfterEnv: [
     './tests/jest.setup.ts',
     process.env.TEST_TYPE === 'visual' && './tests/visual/jest-visual.setup.ts'
@@ -175,11 +168,9 @@ const config: Config = {
   // snapshotSerializers: [],
 
   // The test environment that will be used for testing
-  testEnvironment: {
-    'visual': 'puppeteer',
-    'unit': 'jsdom'
-    // @ts-ignore
-  }[process.env.TEST_TYPE] ?? 'jsdom',
+  testEnvironment: (process.env.TEST_TYPE === 'visual') 
+    ? 'puppeteer' 
+    : ((!process.env.TEST_TYPE || process.env.TEST_TYPE === 'unit') ? 'jsdom' : 'jsdom'),
 
   // Options that will be passed to the testEnvironment
   // testEnvironmentOptions: {},
@@ -208,13 +199,20 @@ const config: Config = {
   // testRunner: "jest-circus/runner",
 
   // A map from regular expressions to paths to transformers
-  // transform: undefined,
+  transform: {
+    '^.+\\.(ts|tsx)?$': ['ts-jest', {
+      useESM: true,
+    }],
+    '^.+\\.(js|jsx|mjs)$': ['babel-jest', {
+      presets: ['@babel/preset-env'],
+      plugins: ['@babel/plugin-transform-modules-commonjs']
+    }],
+  },
 
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
-  // transformIgnorePatterns: [
-  //   "/node_modules/",
-  //   "\\.pnp\\.[^\\/]+$"
-  // ],
+  transformIgnorePatterns: [
+    "/node_modules/(?!(.+))/"
+  ],
 
   // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
   // unmockedModulePathPatterns: undefined,
@@ -229,11 +227,17 @@ const config: Config = {
   // watchman: true,
 };
 
-const {ServeFrontend, MockBackend} = require('./tests/serve-content.js');
-if (process.env.TEST_TYPE === 'visual') {
-  // Serve frontend content for visual snapshots and to make the dom available
-  ServeFrontend.getInstance();
-  MockBackend.getInstance();
+try {
+  // Dynamic import for server components in a way that's compatible with CommonJS
+  const { ServeFrontend, MockBackend } = require('./tests/serve-content');
+
+  if (process.env.TEST_TYPE === 'visual') {
+    // Serve frontend content for visual snapshots and to make the dom available
+    ServeFrontend.getInstance();
+    MockBackend.getInstance();
+  }
+} catch (error) {
+  console.warn('Could not load serve-content.js:', error.message);
 }
 
-export default config;
+module.exports = config; 

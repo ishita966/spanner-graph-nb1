@@ -16,12 +16,12 @@
  *
  */
 
-const GraphStore = require('../../../src/spanner-store');
-const GraphConfig = require('../../../src/spanner-config');
-const GraphNode = require('../../../src/models/node');
-const Edge = require('../../../src/models/edge');
-const {Sidebar, SidebarConstructor} = require('../../../src/visualization/spanner-sidebar');
-const mockData = require('../../mock-data.json');
+import GraphStore from '../../../src/spanner-store';
+import GraphConfig from '../../../src/spanner-config';
+import GraphNode from '../../../src/models/node';
+import Edge from '../../../src/models/edge';
+import {Sidebar, SidebarConstructor} from '../../../src/visualization/spanner-sidebar';
+import mockData from '../../mock-data.json';
 
 // Helper function to convert hex to rgb
 function hexToRgb(hex) {

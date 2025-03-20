@@ -13,11 +13,10 @@
  * limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    GraphConfig = require('./spanner-config');
-    Node = require('./models/node');
-    Edge = require('./models/edge');
-}
+import GraphConfig from './spanner-config';
+import GraphEdge from "./models/edge";
+import GraphNode from "./models/node";
+import GraphObject from "./models/graph-object";
 
 /**
  * @callback GraphConfigCallback
@@ -70,8 +69,8 @@ if (typeof process !== 'undefined' && process.versions && process.versions.node)
 
 /**
  * @callback NodeExpansionRequestCallback
- * @param {Node} node
- * @param {Edge.Direction} direction
+ * @param {GraphNode} node
+ * @param {GraphEdge.Direction} direction
  * @param {String} edgeLabel
  * @param {{key: string, value: string|number, type: PropertyDeclarationType}[]} properties
  * @param {GraphConfig} config - The graph configuration
@@ -80,7 +79,7 @@ if (typeof process !== 'undefined' && process.versions && process.versions.node)
 
 /**
  * @callback GraphDataUpdateCallback
- * @param {{nodes: Array<Node>, edges: Array<Edge>}} currentGraph - The current state of the graph
+ * @param {{nodes: Array<GraphNode>, edges: Array<Edge>}} currentGraph - The current state of the graph
  * @param {{newNodes: Array<NodeData>, newEdges: Array<EdgeData>}} updates - The newly added data
  * @param {GraphConfig} config - The graph configuration
  * @returns {void}
@@ -250,7 +249,7 @@ class GraphStore {
             return new Set();
         }
 
-        if (graphObject instanceof Node) {
+        if (graphObject instanceof GraphNode) {
             return this.getEdgesOfNode(graphObject);
         }
 
@@ -259,11 +258,11 @@ class GraphStore {
 
     /**
      * Get edges associated with a node.
-     * @param {Node} node - The node to get edges for.
+     * @param {GraphNode} node - The node to get edges for.
      * @returns {Set<Edge>} A set of edges associated with the node.
      */
     getEdgesOfNode(node) {
-        if (!node || !(node instanceof Node)) {
+        if (!(node instanceof GraphNode)) {
             return new Set();
         }
 
@@ -293,11 +292,11 @@ class GraphStore {
 
     /**
      * Gets all possible edge types for a node based on its labels and the schema
-     * @param {Node} node - The node to get edge types for
+     * @param {GraphNode} node - The node to get edge types for
      * @returns {Array<{label: string, direction: 'INCOMING' | 'OUTGOING'}>} Array of edge types with their directions
      */
     getEdgeTypesOfNode(node) {
-        if (!node || !(node instanceof Node)) {
+        if (!(node instanceof GraphNode)) {
             return [];
         }
 
@@ -342,11 +341,11 @@ class GraphStore {
 
     /**
      * Get neighbors of a node.
-     * @param {Node} node - The node to get neighbors for.
+     * @param {GraphNode} node - The node to get neighbors for.
      * @returns {NeighborMap} A set of neighbor information objects.
      */
     getNeighborsOfNode(node) {
-        if (!node || !(node instanceof Node)) {
+        if (!(node instanceof GraphNode)) {
             return {}
         }
 
@@ -359,12 +358,12 @@ class GraphStore {
 
     /**
      * Check if an edge is connected to a specific node.
-     * @param {Edge} edge - The edge to check.
-     * @param {Node} node - The node to check connection with.
+     * @param {GraphEdge} edge - The edge to check.
+     * @param {GraphNode} node - The node to check connection with.
      * @returns {boolean} True if the edge is connected to the node, false otherwise.
      */
     edgeIsConnectedToNode(edge, node) {
-        if (!edge || !(edge instanceof Edge) || !node || !(node instanceof Node)) {
+        if (!edge || !(edge instanceof GraphEdge) || !node || !(node instanceof GraphNode)) {
             return false;
         }
 
@@ -373,12 +372,12 @@ class GraphStore {
 
     /**
      * Check if a node is a neighbor to another node.
-     * @param {Node} node - The node to check from.
-     * @param {Node} potentialNeighbor - The potential neighbor node.
+     * @param {GraphNode} node - The node to check from.
+     * @param {GraphNode} potentialNeighbor - The potential neighbor node.
      * @returns {boolean} True if the nodes are neighbors, false otherwise.
      */
     nodeIsNeighborTo(node, potentialNeighbor) {
-        if (!(potentialNeighbor instanceof Node)) {
+        if (!(potentialNeighbor instanceof GraphNode)) {
             return false;
         }
 
@@ -387,7 +386,7 @@ class GraphStore {
 
     /**
      * Check if an edge is connected to the focused node.
-     * @param {Edge} edge - The edge to check.
+     * @param {GraphEdge} edge - The edge to check.
      * @returns {boolean} True if the edge is connected to the focused node, false otherwise.
      */
     edgeIsConnectedToFocusedNode(edge) {
@@ -396,7 +395,7 @@ class GraphStore {
 
     /**
      * Check if an edge is connected to the selected node.
-     * @param {Edge} edge - The edge to check.
+     * @param {GraphEdge} edge - The edge to check.
      * @returns {boolean} True if the edge is connected to the selected node, false otherwise.
      */
     edgeIsConnectedToSelectedNode(edge) {
@@ -405,7 +404,7 @@ class GraphStore {
 
     /**
      * Check if a node is a neighbor to the focused node.
-     * @param {Node} node - The node to check.
+     * @param {GraphNode} node - The node to check.
      * @returns {boolean} True if the node is a neighbor to the focused node, false otherwise.
      */
     nodeIsNeighborToFocusedNode(node) {
@@ -414,7 +413,7 @@ class GraphStore {
 
     /**
      * Check if a node is a neighbor to the selected node.
-     * @param {Node} node - The node to check.
+     * @param {GraphNode} node - The node to check.
      * @returns {boolean} True if the node is a neighbor to the selected node, false otherwise.
      */
     nodeIsNeighborToSelectedNode(node) {
@@ -450,8 +449,8 @@ class GraphStore {
      * @returns {string} The color for the node based on its label.
      */
     getColorForNodeByLabel(node) {
-        const defaultColor = 'rgb(100, 100, 100)'
-        if (!node || !(node instanceof Node)) {
+        const defaultColor = 'rgb(100, 100, 100)';
+        if (!(node instanceof GraphNode)) {
             return defaultColor;
         }
 
@@ -623,8 +622,8 @@ class GraphStore {
     }
 
     /**
-     * @param {Node} node
-     * @param {Edge.Direction} direction
+     * @param {GraphNode} node
+     * @param {GraphEdge.Direction} direction
      * @param {string|undefined} edgeLabel
      */
     requestNodeExpansion(node, direction, edgeLabel) {
@@ -640,7 +639,7 @@ class GraphStore {
 
     /**
      * Gets the type of a specific property for a node.
-     * @param {Node} node - The node to get the property type from
+     * @param {GraphNode} node - The node to get the property type from
      * @param {string} propertyName - The name of the property to get the type for
      * @returns {PropertyDeclarationType|null} The type of the property, or null if not found
      */

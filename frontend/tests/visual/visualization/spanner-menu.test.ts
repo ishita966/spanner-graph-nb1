@@ -15,12 +15,8 @@
  *
  */
 
-/**
- * @jest-environment puppeteer
- */
-
-const GraphConfig = require('../../../src/spanner-config');
-const GraphStore = require('../../../src/spanner-store');
+// @ts-ignore
+import GraphConfig from "../../../src/spanner-config";
 
 describe('SpannerMenu', () => {
     beforeEach(async () => {

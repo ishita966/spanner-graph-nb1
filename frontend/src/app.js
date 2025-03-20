@@ -13,6 +13,15 @@
  * limitations under the License.
  */
 
+// Import dependencies using ES modules
+import GraphServer from './graph-server.js';
+import GraphStore from './spanner-store.js';
+import GraphConfig from './spanner-config.js';
+import { Sidebar } from './visualization/spanner-sidebar.js';
+import SpannerMenu from './visualization/spanner-menu.js';
+import SpannerTable from './visualization/spanner-table.js';
+import GraphVisualization from './visualization/spanner-forcegraph.js';
+
 class SpannerApp {
     /**
      * Unique ID to prevent namespace collisions across multiple iPython cells
@@ -427,7 +436,4 @@ class SpannerApp {
     }
 }
 
-
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    module.exports = SpannerApp;
-}
+export default SpannerApp;

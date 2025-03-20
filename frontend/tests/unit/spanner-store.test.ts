@@ -16,13 +16,13 @@
  */
 
 // @ts-ignore
-const GraphStore = require('../../src/spanner-store');
+import GraphStore from '../../src/spanner-store';
 // @ts-ignore
-const GraphConfig = require('../../src/spanner-config');
+import GraphConfig from '../../src/spanner-config';
 // @ts-ignore
-const GraphNode = require('../../src/models/node');
+import GraphNode from '../../src/models/node';
 // @ts-ignore
-const Edge = require('../../src/models/edge');
+import Edge from '../../src/models/edge';
 
 describe('GraphStore', () => {
     let store: typeof GraphStore;

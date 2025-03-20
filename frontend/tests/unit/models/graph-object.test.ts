@@ -13,7 +13,8 @@
  * limitations under the License.
  */
 
-const GraphObject = require('../../../src/models/graph-object.js');
+// @ts-ignore
+import GraphObject from '../../../src/models/graph-object.js';
 
 describe('Graph Object', () => {
     it('should create a Graph Object instance', () => {
