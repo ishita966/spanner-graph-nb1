@@ -26,6 +26,7 @@ def package_files(directory):
 
 extra_files_assets = package_files('assets')
 extra_files_frontend = package_files('frontend')
+extra_files_third_party = package_files('third_party')
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -44,7 +45,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_data={
-        "": extra_files_frontend + extra_files_assets,
+        "": extra_files_frontend + extra_files_assets + extra_files_third_party,
         "spanner_graphs": [
             "graph_mock_data.csv",
             "graph_mock_schema.json",
