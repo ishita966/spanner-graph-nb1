@@ -14,7 +14,7 @@
  */
 
 // @ts-ignore
-const Schema = require('../../../src/models/schema.js');
+import Schema from '../../../src/models/schema.js';
 
 describe('Schema', () => {
     const mockPropertyDeclarations = [

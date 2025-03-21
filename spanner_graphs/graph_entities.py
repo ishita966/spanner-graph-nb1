@@ -146,14 +146,16 @@ class Node:
         identifier (str): The unique identifier for the node.
         labels (List[str]): The labels associated with the node.
         properties (Dict[str, Any]): The properties of the node.
+        intermediate (bool): Determines if this node was generated outside of the query response
     """
 
     def __init__(self, identifier: str, labels: List[str],
-                 properties: Dict[str, Any]):
+                 properties: Dict[str, Any], intermediate = False):
         self.identifier = identifier
         self.labels = labels
         self.key_property_names = []
         self.properties = properties
+        self.intermediate = intermediate
 
     def __repr__(self):
         return (f"Node(identifier={self.identifier}, "
@@ -165,8 +167,19 @@ class Node:
             "identifier": self.identifier,
             "labels": self.labels,
             "properties": self.properties,
-            "key_property_names": self.key_property_names
+            "key_property_names": self.key_property_names,
+            "intermediate": self.intermediate
         }
+
+    @staticmethod
+    def make_intermediate(identifier: str):
+        """Create a Node instance in the absence of a node from the query response"""
+        return Node(
+            identifier=identifier,
+            labels=["Intermediate"],
+            properties={"note": "This node represents a referenced entity that wasn't returned in the query results."},
+            intermediate=True
+        )
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> Node:

@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    GraphStore = require('../spanner-store');
-}
+import GraphConfig from "../spanner-config"
+import GraphStore from "../spanner-store";
 
 class SpannerMenu {
     svg = {
@@ -579,6 +578,4 @@ class SpannerMenu {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SpannerMenu;
-}
+export default SpannerMenu;

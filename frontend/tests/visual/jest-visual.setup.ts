@@ -15,7 +15,7 @@
  *
  */
 
-const {configureToMatchImageSnapshot} = require('jest-image-snapshot');
+import {configureToMatchImageSnapshot} from "jest-image-snapshot";
 
 // Initialize jest-image-snapshot
 const toMatchImageSnapshot = configureToMatchImageSnapshot({

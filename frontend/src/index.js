@@ -13,4 +13,6 @@
  * limitations under the License.
  */
 
-module.exports = {presets: ['@babel/preset-env']}
+import SpannerApp from './app.js';
+
+window.SpannerApp = SpannerApp;

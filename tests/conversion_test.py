@@ -18,6 +18,9 @@ This module tests the conversion file in `spanner_graph/conversion.py`
 
 from __future__ import annotations
 import unittest
+import json
+
+from google.cloud.spanner_v1.types import StructType, Type, TypeCode
 
 from spanner_graphs.conversion import get_nodes_edges
 from spanner_graphs.database import MockSpannerDatabase
@@ -75,6 +78,154 @@ class TestConversion(unittest.TestCase):
             dest_exists = any(node.identifier == edge.destination for node in nodes)
             self.assertTrue(source_exists, f"Edge source {edge.source} should exist in nodes")
             self.assertTrue(dest_exists, f"Edge destination {edge.destination} should exist in nodes")
+
+    def test_get_nodes_edges_with_missing_nodes(self) -> None:
+        """Test that intermediate nodes are created for missing node references in edges."""
+        # Create mock data with edges that reference nodes that don't exist in the result
+        data = {
+            "column1": [
+                json.dumps({
+                    "kind": "edge",
+                    "identifier": "edge1",
+                    "source_node_identifier": "node1",
+                    "destination_node_identifier": "node2",
+                    "labels": ["CONNECTS_TO"],
+                    "properties": {"weight": 5}
+                }),
+                json.dumps({
+                    "kind": "node",
+                    "identifier": "node1", 
+                    "labels": ["Device"],
+                    "properties": {"name": "Router"}
+                })
+                # Note: node2 is intentionally missing
+            ]
+        }
+        
+        # Create a mock field for the column
+        field = StructType.Field(
+            name="column1",
+            type_=Type(code=TypeCode.JSON)
+        )
+        
+        # Convert data to nodes and edges
+        nodes, edges = get_nodes_edges(data, [field])
+        
+        # Verify we got the expected number of nodes and edges
+        self.assertEqual(len(edges), 1, "Should have one edge")
+        self.assertEqual(len(nodes), 2, "Should have two nodes (one real, one intermediate)")
+        
+        # Verify node identifiers
+        node_ids = {node.identifier for node in nodes}
+        self.assertIn("node1", node_ids, "Original node should exist")
+        self.assertIn("node2", node_ids, "Missing node should be created as intermediate")
+        
+        # Find the intermediate node
+        intermediate_node = next((node for node in nodes if node.identifier == "node2"), None)
+        self.assertIsNotNone(intermediate_node, "Intermediate node should exist")
+        self.assertTrue(intermediate_node.intermediate, "Node should be marked as intermediate")
+        self.assertEqual(intermediate_node.labels, ["Intermediate"], "Intermediate node should have the Intermediate label")
+        self.assertIn("note", intermediate_node.properties, "Intermediate node should have a note property")
+
+    def test_get_nodes_edges_with_multiple_references(self) -> None:
+        """Test that multiple edges referencing the same missing node only create one intermediate node."""
+        # Create mock data with multiple edges that reference the same missing node
+        data = {
+            "column1": [
+                json.dumps({
+                    "kind": "edge",
+                    "identifier": "edge1",
+                    "source_node_identifier": "node1",
+                    "destination_node_identifier": "missing_node",
+                    "labels": ["CONNECTS_TO"],
+                    "properties": {"weight": 5}
+                }),
+                json.dumps({
+                    "kind": "edge",
+                    "identifier": "edge2",
+                    "source_node_identifier": "node2",
+                    "destination_node_identifier": "missing_node",
+                    "labels": ["CONNECTS_TO"],
+                    "properties": {"weight": 10}
+                }),
+                json.dumps({
+                    "kind": "node",
+                    "identifier": "node1", 
+                    "labels": ["Device"],
+                    "properties": {"name": "Router"}
+                }),
+                json.dumps({
+                    "kind": "node",
+                    "identifier": "node2", 
+                    "labels": ["Device"],
+                    "properties": {"name": "Switch"}
+                })
+                # Note: missing_node is intentionally missing
+            ]
+        }
+        
+        # Create a mock field for the column
+        field = StructType.Field(
+            name="column1",
+            type_=Type(code=TypeCode.JSON)
+        )
+        
+        # Convert data to nodes and edges
+        nodes, edges = get_nodes_edges(data, [field])
+        
+        # Verify we got the expected number of nodes and edges
+        self.assertEqual(len(edges), 2, "Should have two edges")
+        self.assertEqual(len(nodes), 3, "Should have three nodes (two real, one intermediate)")
+        
+        # Count intermediate nodes
+        intermediate_nodes = [node for node in nodes if node.intermediate]
+        self.assertEqual(len(intermediate_nodes), 1, "Should create only one intermediate node")
+        self.assertEqual(intermediate_nodes[0].identifier, "missing_node", "Intermediate node identifier should match")
+
+    def test_get_nodes_edges_with_complete_data(self) -> None:
+        """Test that no intermediate nodes are created when all node references are present."""
+        # Create mock data with edges where all referenced nodes exist
+        data = {
+            "column1": [
+                json.dumps({
+                    "kind": "edge",
+                    "identifier": "edge1",
+                    "source_node_identifier": "node1",
+                    "destination_node_identifier": "node2",
+                    "labels": ["CONNECTS_TO"],
+                    "properties": {"weight": 5}
+                }),
+                json.dumps({
+                    "kind": "node",
+                    "identifier": "node1", 
+                    "labels": ["Device"],
+                    "properties": {"name": "Router"}
+                }),
+                json.dumps({
+                    "kind": "node",
+                    "identifier": "node2", 
+                    "labels": ["Device"],
+                    "properties": {"name": "Switch"}
+                })
+            ]
+        }
+        
+        # Create a mock field for the column
+        field = StructType.Field(
+            name="column1",
+            type_=Type(code=TypeCode.JSON)
+        )
+        
+        # Convert data to nodes and edges
+        nodes, edges = get_nodes_edges(data, [field])
+        
+        # Verify we got the expected number of nodes and edges
+        self.assertEqual(len(edges), 1, "Should have one edge")
+        self.assertEqual(len(nodes), 2, "Should have exactly two nodes (no intermediates)")
+        
+        # Verify no intermediate nodes exist
+        intermediate_nodes = [node for node in nodes if node.intermediate]
+        self.assertEqual(len(intermediate_nodes), 0, "Should not create any intermediate nodes")
 
 if __name__ == "__main__":
     unittest.main()

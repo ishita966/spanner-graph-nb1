@@ -639,6 +639,4 @@ class SpannerTable {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SpannerTable;
-}
+export default SpannerTable;

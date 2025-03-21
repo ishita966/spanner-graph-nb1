@@ -16,13 +16,13 @@
  */
 
 // @ts-ignore
-const GraphStore = require('../../src/spanner-store');
+import GraphStore from '../../src/spanner-store';
 // @ts-ignore
-const GraphConfig = require('../../src/spanner-config');
+import GraphConfig from '../../src/spanner-config';
 // @ts-ignore
-const GraphNode = require('../../src/models/node');
+import GraphNode from '../../src/models/node';
 // @ts-ignore
-const Edge = require('../../src/models/edge');
+import Edge from '../../src/models/edge';
 
 describe('GraphStore', () => {
     let store: typeof GraphStore;
@@ -924,5 +924,87 @@ describe('GraphStore', () => {
         expect(store.getEdgeTypesOfNodeSorted(null)).toEqual([]);
         expect(store.getEdgeTypesOfNodeSorted(undefined)).toEqual([]);
         expect(store.getEdgeTypesOfNodeSorted({} as any)).toEqual([]);
+    });
+
+    describe('Intermediate Node Handling', () => {
+        test('should return correct color for intermediate nodes', () => {
+            const intermediateNode = new GraphNode({
+                identifier: "1",
+                labels: ['Person'],
+                properties: {},
+                intermediate: true
+            });
+
+            const color = store.getColorForNodeByLabel(intermediateNode);
+            expect(color).toBe('rgb(128, 134, 139)');
+        });
+
+        test('should return correct color for non-intermediate nodes', () => {
+            const regularNode = new GraphNode({
+                identifier: "1",
+                labels: ['Person'],
+                properties: {}
+            });
+
+            // Set up the node color explicitly for the test
+            store.config.nodeColors['Person'] = '#FF0000';
+            
+            const color = store.getColorForNodeByLabel(regularNode);
+            expect(color).toBe('#FF0000'); // Now we expect the color we explicitly set
+        });
+
+        test('should handle node expansion requests for intermediate nodes', () => {
+            const intermediateNode = new GraphNode({
+                identifier: "1",
+                labels: ['Person'],
+                properties: {},
+                intermediate: true
+            });
+
+            // Mock the event listener
+            const mockCallback = jest.fn();
+            store.addEventListener(GraphStore.EventTypes.NODE_EXPANSION_REQUEST, mockCallback);
+
+            // Request expansion
+            store.requestNodeExpansion(intermediateNode, 'OUTGOING', 'CONNECTS_TO');
+
+            // Verify the callback was called with correct parameters
+            expect(mockCallback).toHaveBeenCalledWith(
+                intermediateNode,
+                'OUTGOING',
+                'CONNECTS_TO',
+                expect.any(Array),
+                expect.any(Object)
+            );
+        });
+
+        test('should handle node expansion requests for non-intermediate nodes', () => {
+            const regularNode = new GraphNode({
+                identifier: "1",
+                labels: ['Person'],
+                properties: { name: 'John' }
+            });
+
+            // Mock the event listener
+            const mockCallback = jest.fn();
+            store.addEventListener(GraphStore.EventTypes.NODE_EXPANSION_REQUEST, mockCallback);
+
+            // Request expansion
+            store.requestNodeExpansion(regularNode, 'OUTGOING', 'CONNECTS_TO');
+
+            // Verify the callback was called with correct parameters
+            expect(mockCallback).toHaveBeenCalledWith(
+                regularNode,
+                'OUTGOING',
+                'CONNECTS_TO',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        key: 'name',
+                        value: 'John'
+                    })
+                ]),
+                expect.any(Object)
+            );
+        });
     });
 });

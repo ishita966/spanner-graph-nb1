@@ -14,7 +14,7 @@
  */
 
 // @ts-ignore
-const GraphNode = require('../../../src/models/node.js');
+import GraphNode from '../../../src/models/node.js';
 
 describe('Node', () => {
     const validNodeData = {
@@ -55,6 +55,34 @@ describe('Node', () => {
             
             const graphNode = new GraphNode(nodeWithFalsyPropertyName);
             expect(graphNode.identifiers).toEqual(['foo', 'boolean', 'zero']);
+        });
+    });
+
+    describe('Intermediate Nodes', () => {
+        it('should create a non-intermediate node by default', () => {
+            const graphNode = new GraphNode(validNodeData);
+            expect(graphNode.intermediate).toBe(false);
+            expect(graphNode.isIntermediateNode()).toBe(false);
+        });
+
+        it('should create an intermediate node when specified', () => {
+            const intermediateNodeData = {
+                ...validNodeData,
+                intermediate: true
+            };
+            const graphNode = new GraphNode(intermediateNodeData);
+            expect(graphNode.intermediate).toBe(true);
+            expect(graphNode.isIntermediateNode()).toBe(true);
+        });
+
+        it('should handle undefined intermediate flag', () => {
+            const nodeData = {
+                ...validNodeData,
+                intermediate: undefined
+            };
+            const graphNode = new GraphNode(nodeData);
+            expect(graphNode.intermediate).toBe(false);
+            expect(graphNode.isIntermediateNode()).toBe(false);
         });
     });
 });

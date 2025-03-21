@@ -95,6 +95,4 @@ class GraphObject {
     }
 }
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    module.exports = GraphObject;
-}
+export default GraphObject;

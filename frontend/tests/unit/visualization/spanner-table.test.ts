@@ -16,10 +16,10 @@
  *
  */
 
-const GraphStore = require('../../../src/spanner-store');
-const GraphConfig = require('../../../src/spanner-config');
-const mockData = require('../../mock-data.json');
-const SpannerTable = require('../../../src/visualization/spanner-table');
+import GraphStore from '../../../src/spanner-store';
+import GraphConfig from '../../../src/spanner-config';
+import mockData from '../../mock-data.json';
+import SpannerTable from '../../../src/visualization/spanner-table';
 
 describe('SpannerTable', () => {
     let store;

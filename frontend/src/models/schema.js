@@ -390,6 +390,4 @@ class Schema {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Schema;
-}
+export default Schema;

@@ -151,3 +151,4 @@ Dockerfile
 /frontend/package-lock.json
 /frontend/tests/coverage/
 /*/**/__image_snapshots__
+/frontend/.parcel-cache

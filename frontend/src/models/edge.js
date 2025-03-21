@@ -13,16 +13,14 @@
  * limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    GraphObject = require('./graph-object');
-}
+import GraphObject from './graph-object';
 
 /**
  * Represents a graph edge.
  * @class
  * @extends GraphObject
  */
-class Edge extends GraphObject {
+class GraphEdge extends GraphObject {
     /**
      * Preserve the UID from being overwritten by ForceGraph
      * @type {GraphObjectUID}
@@ -37,13 +35,13 @@ class Edge extends GraphObject {
 
     /**
      * ForceGraph inserts a Node reference
-     * @type {Node}
+     * @type {GraphNode}
      */
     source;
 
     /**
      * ForceGraph inserts a Node reference
-     * @type {Node}
+     * @type {GraphNode}
      */
     target;
 
@@ -103,6 +101,4 @@ class Edge extends GraphObject {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Edge;
-}
+export default GraphEdge;

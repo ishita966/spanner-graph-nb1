@@ -13,7 +13,14 @@
  * limitations under the License.
  */
 
-/** @typedef {import('../models/edge').Edge} Edge */
+/** @typedef {import('../models/edge').GraphEdge} Edge */
+
+import {forceCollide} from "d3-force";
+import ForceGraph from 'force-graph';
+import GraphEdge from "../models/edge";
+import GraphNode from "../models/node";
+import GraphConfig from "../spanner-config";
+import GraphStore from "../spanner-store";
 
 class GraphVisualization {
     /**
@@ -42,26 +49,26 @@ class GraphVisualization {
 
     /**
      * The Node that the user has clicked on. It will be visually highlighted.
-     * @type {?Node}
+     * @type {?GraphNode}
      */
     selectedNode = null;
 
     /**
      * The Edge that the user has clicked on. It will be visually highlighted.
-     * @type {?Edge}
+     * @type {?GraphEdge}
      */
     selectedEdge = null;
 
 
     /**
      * The Nodes that are connected to the selected edge. It will be visually highlighted.
-     * @type {Node[]}
+     * @type {GraphNode[]}
      */
     selectedEdgeNeighbors = [];
 
     /**
      * The Nodes that are connected to the focused edge. It will be visually highlighted.
-     * @type {Node[]}
+     * @type {GraphNode[]}
      */
     focusedEdgeNeighbors = [];
 
@@ -73,13 +80,13 @@ class GraphVisualization {
 
     /**
      * Neighboring Nodes to the selected Node. They will be visually highlighted, but not as prominently as the selected node.
-     * @type {Array<Node>}
+     * @type {Array<GraphNode>}
      */
     selectedNodeNeighbors = [];
 
     /**
      * The Node that the user is hovering their mouse over. It will be visually highlighted.
-     * @type {?Node}
+     * @type {?GraphNode}
      */
     focusedNode = null;
 
@@ -91,7 +98,7 @@ class GraphVisualization {
 
     /**
      * Neighboring Nodes to the focused Node. They will be visually highlighted, but not as prominently as the focused node.
-     * @type {Array<Node>}
+     * @type {Array<GraphNode>}
      */
     focusedNodeNeighbors = [];
 
@@ -100,7 +107,7 @@ class GraphVisualization {
     requestedRecenter = false;
 
     /**
-     * @type {Node[]}
+     * @type {GraphNode[]}
      */
     nodesToUnlockPosition = [];
 
@@ -183,7 +190,7 @@ class GraphVisualization {
 
     /**
      * The currently loading node
-     * @type {Node|null}
+     * @type {GraphNode|null}
      */
     loadingNode = null;
 
@@ -195,13 +202,13 @@ class GraphVisualization {
 
     /**
      * The node that the success toast is being shown for
-     * @type {Node|null}
+     * @type {GraphNode|null}
      */
     successNode = null;
 
     /**
      * Shows a loading indicator for a node that is being expanded
-     * @param {Node} node - The node to show loading state for
+     * @param {GraphNode} node - The node to show loading state for
      */
     showLoadingStateForNode(node) {
         // If we already have a loading node, hide it first
@@ -244,7 +251,7 @@ class GraphVisualization {
 
     /**
      * Hides the loading indicator for a node
-     * @param {Node} node - The node to hide loading state for
+     * @param {GraphNode} node - The node to hide loading state for
      */
     hideLoadingStateForNode(node) {
         if (this.loadingSpinner) {
@@ -260,7 +267,7 @@ class GraphVisualization {
 
     /**
      * Shows an error state for a node when expansion fails
-     * @param {Node} node - The node that failed to expand
+     * @param {GraphNode} node - The node that failed to expand
      * @param {Error} error - The error that occurred
      */
     showErrorStateForNode(node, error) {
@@ -281,7 +288,7 @@ class GraphVisualization {
 
     /**
      * Shows a success message after node expansion
-     * @param {Node} node - The node that was expanded
+     * @param {GraphNode} node - The node that was expanded
      * @param {Object} expansionStats - Statistics about what was added
      * @param {number} expansionStats.nodesAdded - Number of new nodes added
      * @param {number} expansionStats.edgesAdded - Number of new edges added
@@ -338,7 +345,7 @@ class GraphVisualization {
 
     /**
      * Updates the position of the success toast to match the node
-     * @param {Node} node - The node to position the toast near
+     * @param {GraphNode} node - The node to position the toast near
      * @private
      */
     _updateSuccessToastPosition(node) {
@@ -430,11 +437,11 @@ class GraphVisualization {
                 this.focusedEdge = null;
                 this.focusedEdgeNeighbors = [];
 
-                if (graphObject instanceof Node) {
+                if (graphObject instanceof GraphNode) {
                     this.onFocusedNodeChanged(graphObject)
                 }
 
-                if (graphObject instanceof Edge) {
+                if (graphObject instanceof GraphEdge) {
                     this.onFocusedEdgeChanged(graphObject)
                 }
             });
@@ -447,11 +454,11 @@ class GraphVisualization {
                 this.selectedNodeNeighbors = [];
                 this.selectedEdgeNeighbors = [];
 
-                if (graphObject instanceof Node && graphObject) {
+                if (graphObject instanceof GraphNode && graphObject) {
                     this.onSelectedNodeChanged(graphObject);
                 }
 
-                if (graphObject instanceof Edge && graphObject) {
+                if (graphObject instanceof GraphEdge && graphObject) {
                     this.onSelectedEdgeChanged(graphObject);
                 }
             });
@@ -574,7 +581,7 @@ class GraphVisualization {
 
         // Update d3Force collision
         this.requestedRecenter = true;
-        this.graph.d3Force('collide', d3.forceCollide(collisionRadius));
+        this.graph.d3Force('collide', forceCollide(collisionRadius));
     }
 
     _updateGraphSize() {
@@ -834,7 +841,7 @@ class GraphVisualization {
 
     /**
      * Highlights the focused node as well as its edges and neighbors
-     * @param {Node|null} node - The node to highlight. If null, the highlight is removed.
+     * @param {GraphNode|null} node - The node to highlight. If null, the highlight is removed.
      */
     onFocusedNodeChanged(node) {
         this.focusedNode = node;
@@ -961,10 +968,10 @@ class GraphVisualization {
 
                     // Check if ANY node OR edge is focused or selected
                     const isAnyElementFocusedOrSelected =
-                        this.store.config.focusedGraphObject instanceof Node ||
-                        this.store.config.selectedGraphObject instanceof Node ||
-                        this.store.config.focusedGraphObject instanceof Edge ||
-                        this.store.config.selectedGraphObject instanceof Edge;
+                        this.store.config.focusedGraphObject instanceof GraphNode ||
+                        this.store.config.selectedGraphObject instanceof GraphNode ||
+                        this.store.config.focusedGraphObject instanceof GraphEdge ||
+                        this.store.config.selectedGraphObject instanceof GraphEdge;
 
                     // Lighten the edge color if an element is focused or selected
                     // and the edge is NOT connected to it
@@ -1011,7 +1018,7 @@ class GraphVisualization {
                 .nodeCanvasObject(
                     /**
                      * Callback function to draw nodes based off of the current config state.
-                     * @param {Node} node - The node object
+                     * @param {GraphNode} node - The node object
                      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
                      * @param {number} globalScale - The global scale of the graph
                      */
@@ -1020,8 +1027,8 @@ class GraphVisualization {
                         const defaultLightenAmount = 0.64;
 
                         // If a node is selected or focused...
-                        if (this.store.config.selectedGraphObject instanceof Node ||
-                            this.store.config.focusedGraphObject instanceof Node) {
+                        if (this.store.config.selectedGraphObject instanceof GraphNode ||
+                            this.store.config.focusedGraphObject instanceof GraphNode) {
 
                             // Lighten all nodes...
                             lightenAmount = defaultLightenAmount;
@@ -1039,8 +1046,8 @@ class GraphVisualization {
                         }
 
                         // If an edge is selected or focused...
-                        if (this.store.config.selectedGraphObject instanceof Edge ||
-                            this.store.config.focusedGraphObject instanceof Edge) {
+                        if (this.store.config.selectedGraphObject instanceof GraphEdge ||
+                            this.store.config.focusedGraphObject instanceof GraphEdge) {
                             lightenAmount = defaultLightenAmount;
 
                             // If the node is a neighbor of a focused or selected edge
@@ -1086,6 +1093,7 @@ class GraphVisualization {
                         }
 
                         const showLabel =
+                            !node.isIntermediateNode() && (
                             // The user has chosen to view labels
                             this.store.config.showLabels ||
                             // Always show labels in Schema view
@@ -1096,7 +1104,7 @@ class GraphVisualization {
                             this.selectedNodeNeighbors.includes(node) ||
                             this.focusedNodeNeighbors.includes(node) ||
                             this.focusedEdgeNeighbors.includes(node) ||
-                            this.selectedEdgeNeighbors.includes(node);
+                            this.selectedEdgeNeighbors.includes(node));
 
                         // Init label
                         ctx.save();
@@ -1200,7 +1208,7 @@ class GraphVisualization {
 
     _generateGraphElementTooltip(element) {
         let color = "#a9a9a9";
-        if (element instanceof Node) {
+        if (element instanceof GraphNode) {
             color = this.store.getColorForNode(element);
         }
         let content = `
@@ -1245,7 +1253,7 @@ class GraphVisualization {
                 .linkCanvasObject(
                     /**
                      * Draw labels on edges
-                     * @param {Edge} link - The link object
+                     * @param {GraphEdge} link - The link object
                      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
                      * @param {number} globalScale - The global scale of the graph
                      */
@@ -1432,13 +1440,13 @@ class GraphVisualization {
     }
 
     /**
-     * @param {Node} node - The node to show context menu for
+     * @param {GraphNode} node - The node to show context menu for
      * @param {MouseEvent} event - The mouse event that triggered the context menu
      * @private
      */
     _showMouseContextMenu(node, event) {
         // Don't show context menu in schema mode
-        if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA) {
+        if (this.store.config.viewMode === GraphConfig.ViewModes.SCHEMA || node.isIntermediateNode()) {
             return;
         }
 
@@ -1452,17 +1460,17 @@ class GraphVisualization {
         }
 
         const edgeButtons = this.store.getEdgeTypesOfNodeSorted(node).map(({label, direction}) => {
-           const directionSvg = direction === Edge.Direction.INCOMING.description ? this.incomingEdgeSvg : this.outgoingEdgeSvg;
+           const directionSvg = direction === GraphEdge.Direction.INCOMING.description ? this.incomingEdgeSvg : this.outgoingEdgeSvg;
 
            return `<div class="context-menu-item node-expand-edge" data-label="${label}" data-direction="${direction}">${directionSvg} ${label}</div>`;
         });
 
         const html = `
             <div class="graph-context-menu">
-                <div class="context-menu-item node-expand-edge" data-direction="${Edge.Direction.INCOMING.description}" data-label="">
+                <div class="context-menu-item node-expand-edge" data-direction="${GraphEdge.Direction.INCOMING.description}" data-label="">
                     ${this.incomingEdgeSvg} All incoming edges
                 </div>
-                <div class="context-menu-item node-expand-edge" data-direction="${Edge.Direction.OUTGOING.description}" data-label="">
+                <div class="context-menu-item node-expand-edge" data-direction="${GraphEdge.Direction.OUTGOING.description}" data-label="">
                     ${this.outgoingEdgeSvg} All outgoing edges
                 </div>
                 <div class="context-menu-divider"></div>
@@ -1561,7 +1569,7 @@ class GraphVisualization {
             .linkLabel(link => '')
             .autoPauseRedraw(false)
             .onNodeHover(node => {
-                if (!this.store.config.focusedGraphObject || !(this.store.config.focusedGraphObject instanceof Edge)) {
+                if (!this.store.config.focusedGraphObject || !(this.store.config.focusedGraphObject instanceof GraphEdge)) {
                     this.store.setFocusedObject(node);
                 }
 
@@ -1627,3 +1635,5 @@ class GraphVisualization {
         this.graph.graphData(graphData);
     }
 }
+
+export default GraphVisualization;

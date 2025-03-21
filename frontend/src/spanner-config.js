@@ -13,14 +13,12 @@
  * limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    Node = require('./models/node');
-    Edge = require('./models/edge');
-    Schema = require('./models/schema');
-}
+import GraphNode from './models/node';
+import GraphEdge from './models/edge';
+import Schema from './models/schema';
 
 /** @typedef {GraphObjectUID} NodeUID */
-/** @typedef {Record<GraphObjectUID, Node>} NodeMap */
+/** @typedef {Record<GraphObjectUID, GraphNode>} NodeMap */
 /** @typedef {Record<GraphObjectUID, Edge>} EdgeMap */
 /** @typedef {Record<NodeUID, Edge>} NeighborMap */
 
@@ -207,7 +205,7 @@ class GraphConfig {
 
         for (const uid of Object.keys(this.nodes)) {
             const node = this.nodes[uid];
-            if (!node || !(node instanceof Node)) {
+            if (!(node instanceof GraphNode) || node.isIntermediateNode()) {
                 continue;
             }
 
@@ -216,7 +214,7 @@ class GraphConfig {
 
         for (const uid of Object.keys(this.schemaNodes)) {
             const node = this.schemaNodes[uid];
-            if (!node || !(node instanceof Node)) {
+            if (!(node instanceof GraphNode)) {
                 continue;
             }
 
@@ -316,12 +314,12 @@ class GraphConfig {
             }
 
             // Try to create a Node
-            const node = new Node(nodeData);
+            const node = new GraphNode(nodeData);
             if (!node || !node.instantiated) {
                 console.error('Unable to instantiate node', node.instantiationErrorReason);
                 return;
             }
-            if (node instanceof Node && node.instantiated) {
+            if (node instanceof GraphNode && node.instantiated) {
                 nodes[node.uid] = node;
             } else {
                 node.instantiationErrorReason = 'Could not construct an instance of Node';
@@ -353,12 +351,12 @@ class GraphConfig {
             }
 
             // Try to create an Edge
-            const edge = new Edge(edgeData);
+            const edge = new GraphEdge(edgeData);
             if (!edge || !edge.instantiated) {
                 console.error('Unable to instantiate edge', edge.instantiationErrorReason);
                 return;
             }
-            if (edge instanceof Edge) {
+            if (edge instanceof GraphEdge) {
                 edges[edge.uid] = edge;
                 
                 // Update indices right when edge is created
@@ -374,7 +372,7 @@ class GraphConfig {
 
     /**
      * Update the indexing of node and edge relationships
-     * @param {Edge} edge
+     * @param {GraphEdge} edge
      * @private
      */
     _updateEdgeIndices(edge) {
@@ -411,7 +409,8 @@ class GraphConfig {
         const newEdges = this.parseEdges(edgesData);
 
         for (const uid of Object.keys(newNodes)) {
-            if (!this.nodes[uid]) {
+            const existingNode = this.nodes[uid];
+            if (!(existingNode instanceof GraphNode) || existingNode.isIntermediateNode()) {
                 this.nodes[uid] = newNodes[uid];
             }
         }
@@ -430,7 +429,4 @@ class GraphConfig {
     }
 }
 
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = GraphConfig;
-}
+export default GraphConfig;

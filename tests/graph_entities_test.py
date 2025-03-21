@@ -36,28 +36,47 @@ class TestNode(unittest.TestCase):
         self.assertEqual(node.identifier, "1")
         self.assertEqual(node.labels, ["Person"])
         self.assertEqual(node.properties, {"name": "Emmanuel"})
+        self.assertFalse(node.intermediate, "Node should not be intermediate by default")
 
-    def test_add_node_to_graph(self):
-        """Test that a node is added correctly to a networkx graph"""
-        graph = nx.MultiDiGraph()
-        node_mapping = {}
+    def test_intermediate_flag_in_constructor(self):
+        """Test that the intermediate flag is set correctly in the constructor"""
+        # Test with intermediate=True
+        node1 = Node("1", ["Person"], {"name": "Emmanuel"}, intermediate=True)
+        self.assertTrue(node1.intermediate, "Node should be marked as intermediate")
+        
+        # Test with intermediate=False
+        node2 = Node("2", ["Person"], {"name": "John"}, intermediate=False)
+        self.assertFalse(node2.intermediate, "Node should not be marked as intermediate")
+        
+        # Test with default (should be False)
+        node3 = Node("3", ["Person"], {"name": "Alice"})
+        self.assertFalse(node3.intermediate, "Node should default to not intermediate")
 
-        data = {
-            "identifier": "1",
-            "labels": ["Person"],
-            "properties": {
-                "name": "Emmanuel"
-            },
-        }
+    def test_make_intermediate(self):
+        """Test the make_intermediate static method"""
+        test_identifier = "test123"
+        node = Node.make_intermediate(test_identifier)
+        
+        self.assertEqual(node.identifier, test_identifier, "Identifier should match input")
+        self.assertEqual(node.labels, ["Intermediate"], "Labels should include 'Intermediate'")
+        self.assertTrue(node.intermediate, "Node should be marked as intermediate")
+        self.assertIn("note", node.properties, "Properties should include a note field")
+        self.assertTrue(
+            "referenced entity" in node.properties["note"],
+            "Note should explain this is a referenced entity"
+        )
 
-        node = Node.from_json(data)
-        if node.identifier not in node_mapping:
-            node_mapping[node.identifier] = len(node_mapping) + 1
-
-        node.add_to_graph(graph)
-
-        self.assertIn(node_mapping["1"], graph)
-        node_id = node_mapping["1"]
+    def test_to_json_with_intermediate(self):
+        """Test that to_json correctly includes the intermediate flag"""
+        # Test with intermediate=True
+        node1 = Node("1", ["Person"], {"name": "Jill"}, intermediate=True)
+        json1 = node1.to_json()
+        self.assertTrue(json1["intermediate"], "JSON should include intermediate=True")
+        
+        # Test with intermediate=False
+        node2 = Node("2", ["Person"], {"name": "John"}, intermediate=False)
+        json2 = node2.to_json()
+        self.assertFalse(json2["intermediate"], "JSON should include intermediate=False")
 
 class TestEdge(unittest.TestCase):
     """Test cases for the Edge class"""

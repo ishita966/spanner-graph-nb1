@@ -19,7 +19,8 @@
  * @jest-environment puppeteer
  */
 
-const {ServeFrontend} = require('../serve-content.js')
+// @ts-ignore
+import {ServeFrontend} from '../serve-content.js'
 
 describe('Hello World', () => {
     it('should run a test', () => {

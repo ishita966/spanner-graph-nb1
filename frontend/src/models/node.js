@@ -13,16 +13,14 @@
  * limitations under the License.
  */
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    GraphObject = require('./graph-object');
-}
+import GraphObject from './graph-object';
 
 /**
  * Represents a graph node.
  * @class
  * @extends GraphObject
  */
-class Node extends GraphObject {
+class GraphNode extends GraphObject {
     /**
      * Arbitrary value
      * @type {number}
@@ -39,6 +37,13 @@ class Node extends GraphObject {
      */
     identifiers = [];
 
+    /**
+     * Denotes if the node was created in the absence of a node from the query response.
+     * This may happen when a query only returns edges. The edge has UIDs for a source/destination node,
+     * but no nodes were returned from the response.
+     * @type {boolean}
+     */
+    intermediate = false;
 
     /**
      * The following properties will be set by ForceGraph.
@@ -58,6 +63,7 @@ class Node extends GraphObject {
      * @property {Object} key_property_names
      * @property {string} color
      * @property {string} identifier
+     * @property {bool} intermediate
      */
 
     /**
@@ -65,11 +71,12 @@ class Node extends GraphObject {
     * @param {NodeData} params
     */
     constructor(params) {
-        const { labels, title, properties, value, key_property_names, identifier } = params;
+        const { labels, title, properties, value, key_property_names, identifier, intermediate } = params;
         super({ labels, title, properties, key_property_names, identifier });
 
         this.value = value;
         this.instantiated = true;
+        this.intermediate = intermediate || false;
 
         // Parse the human-readable unique identifiers that
         // distinguishes a node from its peers
@@ -81,8 +88,10 @@ class Node extends GraphObject {
             }
         }
     }
+
+    isIntermediateNode() {
+        return this.intermediate;
+    }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Node;
-}
+export default GraphNode;
