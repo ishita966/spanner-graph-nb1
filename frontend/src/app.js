@@ -439,7 +439,6 @@ class SpannerApp {
 
         this.loaderElement = this.mount.querySelector('.loader-container');
         this.errorElement = this.mount.querySelector('.error');
-        this.errorElementBottom = this.mount.querySelector('.error-bottom');
         this.componentMounts.menu = this.mount.querySelector(`#graph-menu-${this.id}`);
         this.componentMounts.graph = this.mount.querySelector(`#force-graph-${this.id}`);
         this.componentMounts.sidebar = this.mount.querySelector(`#sidebar-${this.id}`);
