@@ -218,6 +218,7 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
                     "query_result": query_result,
                     "nodes": [],
                     "edges": [],
+                    "rows": []
                 },
                 "error": f"We've detected an error in your query. To help you troubleshoot, the graph schema's layout is shown above." + "\n\n" + f"Query error: \n{getattr(err, 'message', str(err))}"
             }
