@@ -201,7 +201,7 @@ class MockSpannerDatabase:
             for field, value in zip(fields, row):
                 data[field.name].append(value)
 
-        return data, fields, rows, self.schema_json
+        return data, fields, rows, self.schema_json, None
 
 
 database_instances: dict[str, SpannerDatabase | MockSpannerDatabase] = {
