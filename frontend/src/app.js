@@ -104,15 +104,6 @@ class SpannerApp {
 
                 this.loaderElement.classList.add('hidden');
 
-                if (error && !response) {
-                    if (!error) {
-                        error = 'An error has occurred';
-                    }
-
-                    this.errorElement.textContent = error;
-                    this.errorElement.classList.remove('hidden');
-                    return;
-                }
                 
                 const {
                     nodes,
@@ -203,12 +194,18 @@ class SpannerApp {
                     this.store.setViewMode(GraphConfig.ViewModes.TABLE);
                 }
                 // If there is both error and response, show schema view
-                if (error && response.schema){
+                if (error){
+                    if (response.schema){
                     this.store.setViewMode(GraphConfig.ViewModes.SCHEMA);
                     this.errorElement.textContent = error;
                     this.errorElement.classList.remove('hidden'); 
                     this.errorElement.style.bottom = '20px'; // Show error at the bottom of the screen so that it doesn't overlap with schema
                     this.errorElement.style.top = 'unset';
+                    }
+                    else{
+                        this.errorElement.textContent = error;
+                        this.errorElement.classList.remove('hidden');
+                    }
                 }
             });
     }
