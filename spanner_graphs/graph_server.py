@@ -211,28 +211,29 @@ def execute_query(project: str, instance: str, database: str, query: str, mock =
 
     try:
         query_result, fields, rows, schema_json, err = database.execute_query(query)
-        if len(rows) == 0 and schema_json: # if query returned an error
-            return {
-                "response": {
-                    "schema": schema_json,
-                    "query_result": query_result,
-                    "nodes": [],
-                    "edges": [],
-                    "rows": []
-                },
-                "error": f"We've detected an error in your query. To help you troubleshoot, the graph schema's layout is shown above." + "\n\n" + f"Query error: \n{getattr(err, 'message', str(err))}"
-            }
-        if len(rows) == 0 and not schema_json: # if query returned an error
-            return {
-                "response": {
-                    "schema": schema_json,
-                    "query_result": query_result,
-                    "nodes": [],
-                    "edges": [],
-                    "rows": []
-                },
-                "error": f"Schema cannot be created." + "\n\n" + f"Query error: \n{getattr(err, 'message', str(err))}"
-            }
+        if len(rows) == 0 : # if query returned an error
+            if schema_json: # if the schema exists
+                return {
+                    "response": {
+                        "schema": schema_json,
+                        "query_result": query_result,
+                        "nodes": [],
+                        "edges": [],
+                        "rows": []
+                    },
+                    "error": f"We've detected an error in your query. To help you troubleshoot, the graph schema's layout is shown above." + "\n\n" + f"Query error: \n{getattr(err, 'message', str(err))}"
+                }
+            if not schema_json: # if the schema does not exist
+                return {
+                    "response": {
+                        "schema": schema_json,
+                        "query_result": query_result,
+                        "nodes": [],
+                        "edges": [],
+                        "rows": []
+                    },
+                    "error": f"Query error: \n{getattr(err, 'message', str(err))}"
+                }
         nodes, edges = get_nodes_edges(query_result, fields, schema_json)
         
         return {
