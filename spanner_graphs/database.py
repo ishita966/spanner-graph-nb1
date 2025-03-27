@@ -102,6 +102,7 @@ class SpannerDatabase:
             type found for the given field.
             - A list of StructType.Fields representing the fields in the result set.
             - A list of rows as returned by the query execution.
+            - The error message if any.
         """
         self.schema_json = None
         if not is_test_query:
@@ -111,9 +112,11 @@ class SpannerDatabase:
             params = None
             if limit and limit > 0:
                 params = dict(limit=limit)
-
-            results = snapshot.execute_sql(query, params=params)
-            rows = list(results)
+            try : 
+                results = snapshot.execute_sql(query, params=params)
+                rows = list(results)
+            except Exception as e:
+                return {},[],[], self.schema_json, e 
             fields: List[StructType.Field] = results.fields
 
             data = {field.name: [] for field in fields}
@@ -129,9 +132,8 @@ class SpannerDatabase:
                     else:
                         data[field.name].append(value)
 
-            return data, fields, rows, self.schema_json
-
-
+            return data, fields, rows, self.schema_json, None
+                
 class MockSpannerResult:
 
     def __init__(self, file_path: str):
@@ -199,7 +201,7 @@ class MockSpannerDatabase:
             for field, value in zip(fields, row):
                 data[field.name].append(value)
 
-        return data, fields, rows, self.schema_json
+        return data, fields, rows, self.schema_json, None
 
 
 database_instances: dict[str, SpannerDatabase | MockSpannerDatabase] = {

@@ -104,16 +104,7 @@ class SpannerApp {
 
                 this.loaderElement.classList.add('hidden');
 
-                if (error || !response) {
-                    if (!error) {
-                        error = 'An error has occurred';
-                    }
-
-                    this.errorElement.textContent = error;
-                    this.errorElement.classList.remove('hidden');
-                    return;
-                }
-
+                
                 const {
                     nodes,
                     edges,
@@ -201,6 +192,20 @@ class SpannerApp {
 
                 if (!nodes.length) {
                     this.store.setViewMode(GraphConfig.ViewModes.TABLE);
+                }
+                // If there is both error and response, show schema view
+                if (error){
+                    if (response.schema){
+                    this.store.setViewMode(GraphConfig.ViewModes.SCHEMA);
+                    this.errorElement.textContent = error;
+                    this.errorElement.classList.remove('hidden'); 
+                    this.errorElement.style.bottom = '20px'; // Show error at the bottom of the screen so that it doesn't overlap with schema
+                    this.errorElement.style.top = 'unset';
+                    }
+                    else{
+                        this.errorElement.textContent = error;
+                        this.errorElement.classList.remove('hidden');
+                    }
                 }
             });
     }
@@ -320,7 +325,8 @@ class SpannerApp {
 
                 .error  {
                     position: absolute;
-                    top: 20px;
+                    bottom : unset;
+                    top : 20px;
                     left: 20px;
                     right: 20px;
                     font-family: 'Google Sans', Roboto, Arial, sans-serif;
@@ -328,6 +334,7 @@ class SpannerApp {
                     z-index: 10;
                     display: flex;
                     align-items: center;
+                    white-space: pre-wrap;
                     
                     background-color: #f8d7da;
                     border: 1px solid #f5c6cb;
