@@ -1,71 +1,58 @@
 # Spanner Graph Notebook: Explore Your Data Visually
 
 
-The Spanner Graph Notebook tool lets you visually query [Spanner Graph](https://cloud.google.com/spanner/docs/graph/overview) in a notebook environment (e.g. [Google Colab](https://colab.google/) and [Jupyter Notebook](https://jupyter.org/)). Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can extract graph insights and relationship patterns, including node and edge properties and neighbor analysis. The tool also provides graph schema metadata visualization, tabular results inspection and diverse layout topologies.
+The Spanner Graph Notebook tool lets you visually query [Spanner Graph](https://cloud.google.com/spanner/docs/graph/overview) in a notebook environment (e.g. [Google Colab](https://colab.google/) and [Jupyter Notebook](https://jupyter.org/)). 
+
+Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can extract graph insights and relationship patterns, including node and edge properties and neighbor expansion analysis. The tool also provides graph schema metadata visualization, tabular results inspection and diverse layout topologies.
+
+The notebook visualization provides a user experience similar to Spanner Studio visualization, enabling you to visually inspect Spanner Graph data on whatever platform you use.
 
 <img src="./assets/full_viz.png" width="800"/>
 
 ## Table of Contents  
 * [Prerequisites](#prerequisites)
-* [`%%spanner_graph` IPython Magics](#magic-usage)
 * [Google Colab Usage (Installation-Free)](#colab-usage)
-* [Installation and Usage in Jupyter Notebook](#jupyter-usage)
+* [Installation and Usage in Jupyter Notebook or JupyterLab](#jupyter-usage)
 * [Query Requirements](#query-requirements)
 
 <h2 id="prerequisites">
   Prerequisites
 </h2>
 
-To use this tool, you'll need to create a GCP project, a Spanner instance and a Spanner database with graph. You can follow our [Getting started with Spanner Graph](https://codelabs.developers.google.com/codelabs/spanner-graph-getting-started#0) codelab which walks through the setup.
+You need a Spanner database with graph schema and data. The [Getting started with Spanner Graph](https://codelabs.developers.google.com/codelabs/spanner-graph-getting-started#0) codelab or the [Set up and query Spanner Graph](https://cloud.google.com/spanner/docs/graph/set-up) page walks through the setup process.
 
-<h2 id="magic-usage">
-  <span style="font-family: monospace;">%%spanner_graph</span> IPython Magics
+
+<h2 id="colab-usage">
+  Google Colab Usage (Installation-Free)
 </h2>
 
-Spanner Graph Notebook is implemented as an [IPython Magics](https://ipython.readthedocs.io/en/stable/config/custommagics.html). Use the `%%spanner_graph` magic command in a code cell with GCP resource options and a query string:
+You can directly use `%%spanner_graph` magic command to visualize graph query results in [Google Colab](https://colab.google/). The magic command must provide GCP resource options and a query string:
 
  - a Google Cloud [Project ID](https://cloud.google.com/resource-manager/docs/creating-managing-projects) for `--project` option. 
  - a Spanner [Instance ID](https://cloud.google.com/spanner/docs/create-manage-instances) for `--instance` option.
  - a Spanner [database name](https://cloud.google.com/spanner/docs/create-manage-databases) for `--database` option.
  - a [GQL](https://cloud.google.com/spanner/docs/graph/queries-overview) query string that returns graph elements as results.
 
-You GQL query should return graph elements to have them visually displayed. See [Query Requirements](#query-requirements) section for examples. For instance, the code example below visually inspects 50 paths.
 
-```
+The query must return [**graph elements in JSON format**](https://cloud.google.com/spanner/docs/graph/queries-overview#return-graph-elements-json) using the `SAFE_TO_JSON` or `TO_JSON` function. The following example code cell in Colab visualizes account transfers:
+
+```sql
 %%spanner_graph --project my-gcp-project --instance my-spanner-instance --database my-database
 
-GRAPH MyGraph
-MATCH p = (a)-[e]->(b)
-RETURN TO_JSON(p) AS path_json
-LIMIT 50
-
-(Note: `my-gcp-project`, `my-spanner-instance`, `my-database`, and `MyGraph` are placeholders.  Replace them with your actual values.)
+GRAPH FinGraph
+MATCH result_paths = (src:Account {is_blocked: true})-[:Transfers]->(dest:Account)
+RETURN SAFE_TO_JSON(result_paths) AS result_paths
 ```
 
-You can also visualize a local dataset with `--mock` flag. Note that since this is a cell magic command, you must include two newlines after the command:
-
-```
-%%spanner_graph --mock
-
-
-```
-
-
-<h2 id="colab-usage">
-  Colab Usage (Installation-Free)
-</h2>
-
-You can directly invoke `%%spanner_graph` magic command in [Google Colab](https://colab.google/), a hosted Jupyter Notebook service that requires no setup to use. You'll be prompted to authenticate via [`pydata-google-auth`](https://github.com/pydata/pydata-google-auth) if Google Cloud Platform credentials aren't already available.
+You'll be prompted to authenticate via [`pydata-google-auth`](https://github.com/pydata/pydata-google-auth) if Google Cloud Platform credentials aren't readily available.
 
 <img src="./assets/colab_usage.png" width="600"/>
 
 <h2 id="jupyter-usage">
-  Installation and Usage in Jupyter Notebook
+  Installation and Usage in Jupyter Notebook or JupyterLab
 </h2>
 
-You can install and use this package in [Jupyter Notebook](https://jupyter.org/). We provided a [`sample.ipynb`](https://github.com/cloudspannerecosystem/spanner-graph-notebook/blob/main/sample.ipynb) in the root directory of this repo for you to follow.
-
-### Install dependencies
+### Install the package
 
 Follow the commands below to create a managed Python environment (example based on [virtualenv](https://virtualenv.pypa.io/en/latest/)) and install [`spanner-graph-notebook`](https://pypi.org/project/spanner-graph-notebook/).
 
@@ -80,17 +67,15 @@ source viz/bin/activate
 pip install spanner-graph-notebook
 ```
 
-### Using
+### Launch Jupyter Notebook
 
-### Launch notebook and follow steps in `sample.ipynb`
-
-When in the root directory of the package, run `jupyter notebook` to launch Jupyter Notebook.
+When in the root directory of the package, run `jupyter notebook` or `jupyter lab` to launch your Jupyter notebook environment.
 
 ```shell
 jupyter notebook
 ```
 
-As Jupyter local server runs, it will open up a web portal. You can create or copy the [`sample.ipynb`](https://github.com/cloudspannerecosystem/spanner-graph-notebook/blob/main/sample.ipynb) to step through an example.
+As Jupyter local server runs, it will open up a web portal. You can step through an example notebook [`sample.ipynb`](https://github.com/cloudspannerecosystem/spanner-graph-notebook/blob/main/sample.ipynb).
 
 <img src="./assets/sample_jupyter.png" width="600"/>
 
@@ -98,7 +83,7 @@ You must run `%load_ext spanner_graphs` to load this package. `sample.ipynb` con
 
 <img src="./assets/load_ext.png" width="600"/>
 
-Following the code steps in the sample notebook, you can visually inspect a mock dataset or your Spanner Graph. You'll be prompted to authenticate via [`pydata-google-auth`](https://github.com/pydata/pydata-google-auth) if Google Cloud Platform credentials aren't already available.
+Following the code steps in the sample notebook, you can visually inspect a mock dataset or your Spanner Graph. You'll be prompted to authenticate via [`pydata-google-auth`](https://github.com/pydata/pydata-google-auth) if Google Cloud Platform credentials aren't readily available.
 
 <img src="./assets/jupyter.gif" width="600"/>
 
@@ -108,7 +93,7 @@ Following the code steps in the sample notebook, you can visually inspect a mock
 
 ### Use `TO_JSON` function to return graph elements
 
-To visualize graph paths, nodes, and edges, graph queries must **must use** `SAFE_TO_JSON` or `TO_JSON` function in the RETURN statement. We recommend visualizing **paths** for data completeness and ease of use.
+Graph queries **must use** `SAFE_TO_JSON` or `TO_JSON` function to return [graph elements in JSON format](https://cloud.google.com/spanner/docs/graph/queries-overview#return-graph-elements-json) . We recommend visualizing **graph paths** for data completeness and ease of use.
 
 ```sql
 👍 Good example returning a path as JSON.
@@ -138,8 +123,8 @@ RETURN SAFE_TO_JSON(path_1) as path_1,
 ```
 
 ```
-👎 Anti-example returning node properties rather than JSON format graph elements.
-   Scalar results other than JSON format graph elements cannot be visualized.
+👎 Anti-example returning node properties rather than graph elements in JSON.
+   Scalar intergers or strings cannot be visualized.
 
 GRAPH FinGraph
 MATCH (person:Person {id: 5})-[owns:Owns]->(accnt:Account)
@@ -149,8 +134,8 @@ RETURN person.id AS person,
 ```
 
 ```sql
-👎 Anti-example returning each node and edges in JSON format verbosely. This will
-   work but not as easy as returning a path directly.
+👎 Anti-example returning each node and edges in JSON individually.
+   This will work but is more verbose than returning paths.
 
 GRAPH FinGraph
 MATCH (person:Person {id: 5})-[owns:Owns]->(accnt:Account)
