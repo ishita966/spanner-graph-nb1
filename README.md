@@ -46,7 +46,7 @@ RETURN SAFE_TO_JSON(result_paths) AS result_paths
 
 You'll be prompted to authenticate via [`pydata-google-auth`](https://github.com/pydata/pydata-google-auth) if Google Cloud Platform credentials aren't readily available.
 
-<img src="./assets/colab_usage.png" width="600"/>
+<img src="./assets/colab_usage.gif" width="600"/>
 
 <h2 id="jupyter-usage">
   Installation and Usage in Jupyter Notebook or JupyterLab
