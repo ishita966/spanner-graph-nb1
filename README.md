@@ -5,7 +5,7 @@ The Spanner Graph Notebook tool lets you visually query [Spanner Graph](https://
 
 Using [GQL](https://cloud.google.com/spanner/docs/reference/standard-sql/graph-intro) query syntax, you can extract graph insights and relationship patterns, including node and edge properties and neighbor expansion analysis. The tool also provides graph schema metadata visualization, tabular results inspection and diverse layout topologies.
 
-The notebook visualization provides a user experience similar to Spanner Studio visualization, enabling you to visually inspect Spanner Graph data on whatever platform you use.
+The notebook visualization provides a user experience similar to Spanner Studio visualization, enabling you to visually inspect Spanner Graph data outside of Google Cloud console.
 
 <img src="./assets/full_viz.png" width="800"/>
 
