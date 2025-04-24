@@ -125,7 +125,7 @@ describe('GraphStore', () => {
             labels: 2,
             nodeTables: [mockNodeTable, mockNodeTable2],
             edgeTables: [mockEdgeTable, mockEdgeTable2],
-            propertyDeclarations: mockPropertyDeclarations
+            propertyDeclarations: mockPropertyDeclarations,
         };
 
         mockConfig = new GraphConfig({
