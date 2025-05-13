@@ -6,7 +6,8 @@ module.exports = {
       },
       modules: 'commonjs'
     }],
-    '@babel/preset-typescript'
+'@babel/preset-typescript',
+       '@babel/preset-react',
   ],
   plugins: [
     '@babel/plugin-transform-modules-commonjs'

@@ -28,7 +28,7 @@ reserved_colors: dict[str, str] = {}
 
 palette = ['#cc7722', '#ffe5b4', '#dda0dd', '#fffacd', '#e6e6fa',
            '#d2b48c', '#6a5acd', '#ffe4e1', '#6495ed', '#4b4b4b',
-           '#ace1af', '#808000', '#e6e6e6', '#9671e8', '#6b8e23',
+           '#ace1af', '#808000', '#e6e6fa', '#9671e8', '#6b8e23',
            '#654321', '#b0e0e6', '#1e1e1e', '#c8c8c8', '#cd853f']
 
 def format_value(key: str, value: Any) -> str:
@@ -147,29 +147,34 @@ class Node:
         labels (List[str]): The labels associated with the node.
         properties (Dict[str, Any]): The properties of the node.
         intermediate (bool): Determines if this node was generated outside of the query response
+        selected_property_value (Any): The value of the user-selected property for display.
     """
 
     def __init__(self, identifier: str, labels: List[str],
-                 properties: Dict[str, Any], intermediate = False):
+                 properties: Dict[str, Any], intermediate = False, selected_property_value = None):
         self.identifier = identifier
         self.labels = labels
         self.key_property_names = []
         self.properties = properties
         self.intermediate = intermediate
+        self.selected_property_value = selected_property_value
 
     def __repr__(self):
         return (f"Node(identifier={self.identifier}, "
-                f"labels={self.labels}, properties={self.properties})")
+                f"labels={self.labels}, properties={self.properties}, selected_property_value={self.selected_property_value})")
 
     def to_json(self) -> dict:
         """Convert the node to a JSON-serializable dictionary."""
-        return {
+        json_data = {
             "identifier": self.identifier,
             "labels": self.labels,
             "properties": self.properties,
             "key_property_names": self.key_property_names,
             "intermediate": self.intermediate
         }
+        if self.selected_property_value is not None:
+            json_data["selected_property_value"] = self.selected_property_value
+        return json_data
 
     @staticmethod
     def make_intermediate(identifier: str):

@@ -103,6 +103,7 @@ class SpannerDatabase:
             - A list of StructType.Fields representing the fields in the result set.
             - A list of rows as returned by the query execution.
         """
+        print("in frontend execute_query")
         self.schema_json = None
         if not is_test_query:
             self.schema_json = self._get_schema_for_graph(query)
@@ -129,7 +130,7 @@ class SpannerDatabase:
                     else:
                         data[field.name].append(value)
 
-            return data, fields, rows, self.schema_json
+            return data, fields, rows, self.schema_json, None
 
 
 class MockSpannerResult:
@@ -199,7 +200,7 @@ class MockSpannerDatabase:
             for field, value in zip(fields, row):
                 data[field.name].append(value)
 
-        return data, fields, rows, self.schema_json
+        return data, fields, rows, self.schema_json, None
 
 
 database_instances: dict[str, SpannerDatabase | MockSpannerDatabase] = {

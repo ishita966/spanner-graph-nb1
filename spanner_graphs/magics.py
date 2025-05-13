@@ -85,12 +85,16 @@ def is_colab() -> bool:
         return False
 
 def receive_query_request(query: str, params: str):
+    print("receiving query request called")
     params_dict = json.loads(params)
-    return JSON(execute_query(project=params_dict["project"],
+    result = execute_query(project=params_dict["project"],
                               instance=params_dict["instance"],
                               database=params_dict["database"],
                               query=query,
-                              mock=params_dict["mock"]))
+                              mock=params_dict["mock"])
+    print("JSON Data from Backend:")
+    print(json.dumps(result, indent=2))  # Print with indentation for readability
+    return JSON(result)
 
 def receive_node_expansion_request(request: dict, params_str: str):
     """Handle node expansion requests in Google Colab environment
@@ -143,6 +147,7 @@ class NetworkVisualizationMagics(Magics):
     def visualize(self):
         """Helper function to create and display the visualization"""
         # Extract the graph name from the query (if present)
+        print("Extracting graph name from query...")
         graph = ""
         if 'GRAPH ' in self.cell.upper():
             match = re.search(r'GRAPH\s+(\w+)', self.cell, re.IGNORECASE)
@@ -178,6 +183,7 @@ class NetworkVisualizationMagics(Magics):
                             help="Use mock database")
 
         try:
+            print("Parsing arguments...")
             args = parser.parse_args(line.split())
             if not args.mock:
                 if not (args.project and args.instance and args.database):

@@ -79,7 +79,7 @@ def validate_property_type(property_type: str) -> TypeCode:
     
     return PROPERTY_TYPE_MAP[property_type]
 
-def validate_node_expansion_request(data) -> (list[NodePropertyForDataExploration], EdgeDirection):
+def validate_node_expansion_request(data) -> (list[NodePropertyForDataExploration], EdgeDirection): # type: ignore
     required_fields = ["project", "instance", "database", "graph", "uid", "node_labels", "direction"]
     missing_fields = [field for field in required_fields if data.get(field) is None]
 
@@ -206,20 +206,25 @@ def execute_node_expansion(
 
     return execute_query(project, instance, database, query, mock=False)
 
-def execute_query(project: str, instance: str, database: str, query: str, mock = False):
+def execute_query(project: str, instance: str, database: str, query: str, mock = False, label_preferences = None):
     database = get_database_instance(project, instance, database, mock)
 
     try:
-        query_result, fields, rows, schema_json = database.execute_query(query)
-        nodes, edges = get_nodes_edges(query_result, fields, schema_json)
-        
+        query_result, fields, rows, schema_json, err = database.execute_query(query)
+        nodes, edges = get_nodes_edges(query_result, fields, schema_json, label_preferences=label_preferences)
+
+        node_properties_for_frontend = {}
+        for node in nodes:
+            node_properties_for_frontend[node.identifier] = node.properties
+
         return {
             "response": {
                 "nodes": [node.to_json() for node in nodes],
                 "edges": [edge.to_json() for edge in edges],
                 "schema": schema_json,
                 "rows": rows,
-                "query_result": query_result
+                "query_result": query_result,
+                "node_properties": node_properties_for_frontend
             }
         }
     except Exception as e:
@@ -331,12 +336,14 @@ class GraphServerHandler(http.server.SimpleHTTPRequestHandler):
     def handle_post_query(self):
         data = self.parse_post_data()
         params = json.loads(data["params"])
-        response = execute_query(            
+        label_preferences = data.get("label_preferences")
+        response = execute_query(
             project=params["project"],
             instance=params["instance"],
             database=params["database"],
             query=data["query"],
-            mock=params["mock"]
+            mock=params["mock"],
+            label_preferences=label_preferences
         )
         self.do_data_response(response)
 

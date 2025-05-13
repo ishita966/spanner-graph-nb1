@@ -26,7 +26,7 @@ from google.cloud.spanner_v1.types import TypeCode, StructType
 from spanner_graphs.graph_entities import Node, Edge
 from spanner_graphs.schema_manager import SchemaManager
 
-def get_nodes_edges(data: Dict[str, List[Any]], fields: List[StructType.Field], schema_json: dict = None) -> Tuple[List[Node], List[Edge]]:
+def get_nodes_edges(data: Dict[str, List[Any]], fields: List[StructType.Field], schema_json: dict = None, label_preferences: Dict[str, str] = None) -> Tuple[List[Node], List[Edge]]:
     schema_manager = SchemaManager(schema_json)
     nodes: List[Node] = []
     edges: List[Edge] = []
@@ -69,6 +69,12 @@ def get_nodes_edges(data: Dict[str, List[Any]], fields: List[StructType.Field], 
                     node = Node.from_json(item)
                     if node.identifier not in node_identifiers:
                         node.key_property_names = schema_manager.get_key_property_names(node)
+                        if label_preferences:
+                            node_type = node.labels[0] if node.labels else None
+                            selected_property = label_preferences.get(node_type)
+                            if selected_property and selected_property in node.properties:
+                                # Store the selected property value for the frontend
+                                node.selected_property_value = node.properties[selected_property]
                         nodes.append(node)
                         node_identifiers.add(node.identifier)
 

@@ -388,6 +388,13 @@ class Schema {
     getDisplayName(table) {
         return table.labelNames[0];
     }
+
+    /**
+     * @returns {RawSchema} The raw schema object.
+     */
+    getRawSchema() {
+        return this.rawSchema;
+    }
 }
 
 export default Schema;

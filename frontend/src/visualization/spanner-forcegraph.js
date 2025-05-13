@@ -361,10 +361,13 @@ class GraphVisualization {
      * @param {GraphStore} inStore - The store to derive configuration from.
      * @param {HTMLElement} inMount - The DOM element that the graph will be rendered in.
      * @param {HTMLElement} inMenuMount - The DOM element that the top menu will be rendered in.
+     * @param {Object} labelPreferences - The label preferences for the graph.
      */
-    constructor(inStore, inMount, inMenuMount) {
+    constructor(inStore, inMount, inMenuMount, labelPreferences) {
+        console.log('GraphVisualization this.store in constructor:', inStore)
+        print('GraphVisualization this.labelPreferences in constructor:', labelPreferences)
         if (!(inStore instanceof GraphStore)) {
-            throw Error('Store must be an instance of GraphStore');
+            console.error('Store must be an instance of GraphStore');
         }
 
         if (!(inMount instanceof HTMLElement)) {
@@ -378,7 +381,8 @@ class GraphVisualization {
         this.store = inStore;
         this.mount = inMount;
         this.menuMount = inMenuMount;
-
+        this.labelPreferences = labelPreferences; // Store the passed labelPreferences
+        this.onLabelPreferenceChange = onLabelPreferenceChange;
         // tooltips are absolutely positioned
         // relative to the mounting element
         this.mount.style.display = 'relative';
@@ -393,7 +397,7 @@ class GraphVisualization {
         this._setupDrawEdges(this.graph);
 
         this.graph.dagMode('');
-
+        //this.initializeEvents(this.store);
         this.render();
     }
 
@@ -417,7 +421,17 @@ class GraphVisualization {
     /**
      * Registers callbacks for GraphStore events.
      * @param {GraphStore} store
+     * @param {object} newLabelPreferences The new label preferences.
+     * @param {function} onLabelPreferenceChange Callback for label preference changes.
      */
+    update(newStore, newLabelPreferences) {
+        console.log('GraphVisualization this.store in update:', newStore)
+        printf('GraphVisualization this.labelPreferences in update:', newLabelPreferences)
+        this.store = newStore;
+        this.labelPreferences = newLabelPreferences;
+        this.renderGraph(); // Re-render the graph with the new data and preferences
+    }
+
     initializeEvents(store) {
         if (!(store instanceof GraphStore)) {
             throw Error('Store must be an instance of GraphStore');
@@ -735,6 +749,9 @@ class GraphVisualization {
      * @param {GraphConfig} config - The new configuration.
      */
     onStoreConfigChange(config) {
+        const graphData = { nodes: this.store.getNodes(), links: this._computeCurvature(this.store.getEdges()) };
+        this.graph.graphData(graphData);
+        this.refreshCache();
         this.render();
     }
 
@@ -1117,7 +1134,12 @@ class GraphVisualization {
                         }
 
                         let label = node.getLabels();
-                        if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT && node.identifiers.length > 0) {
+                        const nodeType = node.getLabels(); // Assuming getLabels() returns the primary label string
+                        const selectedProperty = this.labelPreferences[nodeType];
+
+                        if (selectedProperty && node.properties && node.properties[selectedProperty]) {
+                            label = `${label} (${node.properties[selectedProperty]})`;
+                        } else if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT && node.identifiers.length > 0) {
                             label += ` (${node.identifiers.join(', ')})`;
                         }
 
@@ -1170,34 +1192,40 @@ class GraphVisualization {
 
                             ctx.restore();
                         } else if (this.store.config.viewMode === GraphConfig.ViewModes.DEFAULT) {
-                            // "NodeType <b>(identifiers)</b>"
+                            // "NodeType <b>(identifiers)</b>" or "NodeType <b>(selectedProperty)</b>"
                             // requires two separate drawings
                             ctx.textAlign = 'left';
                             ctx.textBaseline = 'middle';
                             ctx.fillStyle = '#fff';
-
                             // 1. First, handle the regular font part ("NodeType ")
-                            const prefixLabel = `${node.getLabels()} `;
+                            let firstPart = node.getLabels() + ' ';
+                            let secondPart = '';
+                            if (selectedProperty && node.properties && node.properties[selectedProperty]) {
+                                secondPart = `(${node.properties[selectedProperty]})`;
+                            } else if (node.identifiers.length > 0) {
+                                secondPart = `(${node.identifiers.join(', ')})`;
+                            }
+
+                            // 1. Measure regular part
                             ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
-                            const prefixRect = ctx.measureText(prefixLabel);
+                            const firstPartRect = ctx.measureText(firstPart);
 
-                            // 2. Calculate how much wider the text would be if bold
+                            // 2. Measure bold part
                             ctx.font = `bold ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
-                            const prefixBoldRect = ctx.measureText(prefixLabel);
+                            const secondPartRect = ctx.measureText(secondPart);
 
-                            // 3. Adjust starting position to account for bold/regular difference
-                            // This ensures consistent left/right margins regardless of font weight
-                            const prefixLabelX = rectX + padding * 0.5 + (prefixBoldRect.width - prefixRect.width) * 0.5;
+                            const totalWidth = firstPartRect.width + secondPartRect.width;
+                            const startX = rectX + (rectWidth - totalWidth) / 2; // Center the text
 
-                            // 4. Draw regular text first
+                            // 3. Draw regular part
                             ctx.font = `${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
-                            ctx.fillText(prefixLabel, prefixLabelX, textVerticalOffset);
+                            ctx.fillText(firstPart, startX, textVerticalOffset);
 
-                            // 5. Draw bold identifiers part right after
-                            const suffixLabel = `(${node.identifiers.join(', ')})`;
-                            const suffixLabelX = prefixLabelX + prefixRect.width;  // Start where previous text ended
+                            // 4. Draw bold part
+                            const secondPartX = startX + firstPartRect.width;
                             ctx.font = `bold ${fontSize}px 'Google Sans', Roboto, Arial, sans-serif`;
-                            ctx.fillText(suffixLabel, suffixLabelX, textVerticalOffset);
+                            ctx.fillText(secondPart, secondPartX, textVerticalOffset);
+
                             ctx.restore();
                         }
                     });
@@ -1528,7 +1556,10 @@ class GraphVisualization {
      * Renders the graph visualization.
      */
     render() {
+        console.log('GraphVisualization this.store in render:', this.store)
+        print('GraphVisualization this.store in render:', this.store);
         this.requestedRecenter = true;
+        if (!this.store || !this.store.getNodes() || !this.store.getEdges()) return null;
 
         const graphData = {
             nodes: this.store.getNodes().map(node => {

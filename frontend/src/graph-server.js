@@ -160,10 +160,11 @@ class GraphServer {
             .finally(() => this.isFetching = false);
     }
 
-    query(queryString) {
+    query(queryString,labelPreferences) {
         const request = {
             query: queryString,
-            params: this.params
+            params: this.params,
+            label_preferences: labelPreferences // Include preferences
         };
 
         this.isFetching = true;

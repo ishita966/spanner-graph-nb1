@@ -1162,6 +1162,7 @@ class Sidebar {
     }
 
     constructSidebar() {
+
         const sidebar = this.mount;
         sidebar.className = 'sidebar';
 
@@ -1178,6 +1179,11 @@ class Sidebar {
         this.domConstructor = new SidebarConstructor(this.store, sidebar, this._sectionCollapseState);
     }
 
+    update() { // Updates the sidebar with the current state of the GraphStore.
+        this.constructSidebar();
+        this.domConstructor.refresh();
+    }
+
     /**
      * Registers callbacks for GraphStore events.
      * @param {GraphStore} store
@@ -1192,6 +1198,7 @@ class Sidebar {
                 if (this.domConstructor) {
                     this.domConstructor.refresh();
                 }
+                this.update();
             });
 
         store.addEventListener(GraphStore.EventTypes.VIEW_MODE_CHANGE,
@@ -1207,6 +1214,7 @@ class Sidebar {
                 }
 
                 this.constructSidebar();
+                this.update();
             });
 
         store.addEventListener(GraphStore.EventTypes.SELECT_OBJECT,
@@ -1217,6 +1225,7 @@ class Sidebar {
                 this.mount.innerHTML = '';
                 this.mount.textContent = '';
                 this.constructSidebar();
+                this.update();
             });
     }
 }

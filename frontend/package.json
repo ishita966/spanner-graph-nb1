@@ -11,7 +11,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
-    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
     "@babel/preset-typescript": "^7.26.0",
     "@parcel/transformer-sass": "^2.10.3",
     "@types/expect-puppeteer": "^5.0.6",
@@ -34,7 +35,9 @@
   },
   "dependencies": {
     "d3-force": "^3.0.0",
-    "force-graph": "^1.49.4"
+    "force-graph": "^1.49.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "browserslist": [
     "> 0.5%",

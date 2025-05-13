@@ -69,7 +69,13 @@ class SpannerTable {
         this.parseQueryResultToRows();
         this.render();
     }
-
+    update(newStore) {
+        this.store = newStore;
+        this.currentPage = 0; // Reset to the first page on update
+        this.expandedRows.clear(); // Clear expanded rows on update
+        this.parseQueryResultToRows();
+        this.render();
+    }
     initializeEvents() {
         const debounce = (callback, timeout = 300) => {
             let timer = 0;
